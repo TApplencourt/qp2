@@ -62,7 +62,7 @@ safe_build() {
 }
 
 update_db() {
-    pkg_output=$(find ${pkgdir} -type f -printf '%P\n')
+    pkg_output=$(find ${pkgdir} \( -type l -o -type f \) -printf '%P\n')
     if [ -z "${pkg_output}" ]; then
         error "$(gettext "%s have not packaged any file"). Check %s" "${pkgname}" "${pkgdir}"
         exit 1
@@ -101,9 +101,11 @@ safe_uninstall(){
         warning "$(gettext "%s package is not in the database")" "${pkgname}"
     else
         #Get the list of file installed ans remove them
-        travel $qp_root/usr/ alexandria children ${pkgname} | xargs rm --
+        pushd $qp_root > /dev/null
+        alexandria children ${pkgname} | xargs rm --
+        popd > /dev/null
         #Remove empty directiy if exist
-        travel $qp_root/usr/ find -mindepth 1 -type d -empty -delete 
+        travel $qp_root find -mindepth 1 -type d -empty -delete 
         #Now remove it from the db
         alexandria remove ${pkgname}
     fi
