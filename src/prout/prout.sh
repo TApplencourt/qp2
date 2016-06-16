@@ -1,6 +1,6 @@
 #!/bin/bash
 #Unofficial Bash Strict Mode
-set -eo pipefail
+set -o pipefail
 IFS=$'\n\t'
 
 #                  _               
@@ -31,7 +31,7 @@ exit 1
 #   _|_ | | | |_) (_) |   |_ 
 #             |              
 if [ -n "${qp_root+x}" ]; then
-    source $qp_root/src/prout/sanitize.sh
+    source $qp_root/src/prout/safe_fct.sh
     source $qp_root/src/prout/util.sh
     source $qp_root/src/prout/source.sh
     source $qp_root/src/prout/path.sh
@@ -53,6 +53,7 @@ while getopts "sbpuc --long source,build,package,uninstall,clean" opt; do
             FUNCTION+=("safe_source")
             ;;
         b|--build)
+            FUNCTION+=("safe_depend")
             FUNCTION+=("safe_build")
             ;;
         p|--package)
@@ -93,10 +94,10 @@ for pkgfile in $@; do
         pkgfile=$(fn_abs "$pkgfile")
     fi
 
-    pkgfile_rel=$(fn_relpath $pkgfile $qp_root)
-    startdir=$(dirname $pkgfile)
-    srcdir="${startdir}/src"
-    pkgdir="${startdir}/pkg"
+    declare -r pkgfile_rel=$(fn_relpath $pkgfile $qp_root)
+    declare -r startdir=$(dirname $pkgfile)
+    declare -r srcdir="${startdir}/src"
+    declare -r pkgdir="${startdir}/pkg"
     
     source $pkgfile    
     plain "Handle $pkgname"

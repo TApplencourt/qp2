@@ -4,4 +4,4 @@ export qp_module="${qp_root}/module"
 export PATH="${qp_root}"/usr/bin:"${PATH}"
 export LD_LIBRARY_PATH="${qp_root}"/usr/lib:"${LD_LIBRARY_PATH}"
 export LIBRARY_PATH="${qp_root}"/usr/local/lib:"${LIBRARY_PATH}"
-export PYTHONPATH="${qp_root}"/usr/lib/python2.7/site-packages::"${PYTHONPATH}"
+export PYTHONPATH="${PYTHONPATH}":"${qp_root}"/usr/lib/python2.7/site-packages

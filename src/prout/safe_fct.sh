@@ -4,6 +4,14 @@ safe_depend() {
     if [ -n "${depends+x}" ]; then
         check_depend
     fi
+
+    if [ -n "${python_depends+x}" ]; then
+        check_python
+    fi
+
+    if [ -n "${ocaml_depends+x}" ]; then
+        check_ocaml
+    fi    
 }
 
 safe_source() {

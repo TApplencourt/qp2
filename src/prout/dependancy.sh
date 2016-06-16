@@ -1,6 +1,8 @@
+#Dependancy 
+# 1.Archaic form of dependency.
+
 check_depend() {
     # Verify is all the module prensend in the depends array have been installed
-
 
     #All the package already installed
     installed=$(alexandria installed)
@@ -19,7 +21,7 @@ check_depend() {
     if [ ${#diff[@]} -ne 0 ]; then
 
         not_present=()
-        for depend in "${sym_diff[@]}"; do
+        for depend in "${diff[@]}"; do
             warning "$(gettext "%s is not in the db ")" "$depend"
             msg2 "$(gettext "Check if it is already installed in the system" )"
             if $(command -v $depend >/dev/null 2>&1); then
@@ -36,4 +38,29 @@ check_depend() {
         fi
 
     fi
+}
+
+check_python() {
+    for i in "${python_depends[@]}"; do
+        python -c "import $i" 2> /dev/null
+        if [ $? -ne 0 ]; then
+            error "$(gettext "Please install '%s' python module" )" "$i"
+            exit 1
+        fi
+    done
+}
+
+check_ocaml() {
+    if ! $(command -v opam >/dev/null 2>&1); then
+        error "$(gettext "Please install opam.")"
+        exit 1
+    fi
+
+    for i in "${ocaml_depends[@]}"; do
+        python -c "opam list $i" 2> /dev/null
+        if [ $? -ne 0 ]; then
+            error "$(gettext "Please install '%s' opam package" )" "$i"
+            exit 1
+        fi
+    done
 }

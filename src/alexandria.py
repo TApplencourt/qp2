@@ -37,10 +37,12 @@ class alexandria(object):
 
     @irpy.lazy_property
     def json_file(self):
-        return os.path.join(self.qp_root,"usr/etc/alexandria.json")
+        return os.path.join(self.qp_root,"usr/share/json/alexandria.json")
 
     @irpy.lazy_property
     def file_descriptor(self):
+        if not os.path.isfile(self.json_file):
+            return open(self.json_file, 'w+')
         if self.arg["add"] or self.arg["remove"]:
             return open(self.json_file,"r+")
         else:
@@ -48,7 +50,10 @@ class alexandria(object):
 
     @irpy.lazy_property
     def data_json(self):
-        return json.load(self.file_descriptor)
+        try:
+            return json.load(self.file_descriptor)
+        except ValueError:
+            return {}
 
     def save_db(self,data):
         self.file_descriptor.seek(0)
