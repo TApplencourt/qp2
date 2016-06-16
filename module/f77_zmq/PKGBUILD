@@ -1,0 +1,24 @@
+#!/bin/bash
+
+pkgname=f77_zeromq
+pkgver=1.0.1
+pkgdesc="A Fortran 77 binding library for ZeroMQ"
+url="https://github.com/zeromq/f77_zmq"
+
+source=("https://github.com/zeromq/f77_zmq/archive/master.zip")
+depends=('zeromq')
+
+build() {
+  cd "$srcdir/master"
+  export ZMQ_H=$qp_root/usr/include/zmq.h
+  make
+}
+
+package() {
+  cd "$srcdir/master"
+
+  cp libf77zmq.a "$pkgdir/usr/lib/" 
+  cp libf77zmq.so "$pkgdir/usr/lib/"
+  cp f77_zmq.h "$pkgdir/usr/include/"
+
+}

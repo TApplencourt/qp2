@@ -1,0 +1,19 @@
+#!/bin/bash
+
+pkgname=cache_compile
+pkgver=0.1
+pkgdesc="Cache for accelerating re-complation"
+url="https://github.com/scemama/cache_compile"
+source=("https://github.com/scemama/cache_compile/archive/master.zip")
+
+depends=(opam)
+
+build() {
+	cd master
+	make
+}
+
+package() {
+	cd master
+	cp cache_compile "$pkgdir/usr/bin"
+}
