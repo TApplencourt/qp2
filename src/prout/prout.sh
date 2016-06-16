@@ -94,10 +94,10 @@ for pkgfile in $@; do
         pkgfile=$(fn_abs "$pkgfile")
     fi
 
-    declare -r pkgfile_rel=$(fn_relpath $pkgfile $qp_root)
-    declare -r startdir=$(dirname $pkgfile)
-    declare -r srcdir="${startdir}/src"
-    declare -r pkgdir="${startdir}/pkg"
+    pkgfile_rel=$(fn_relpath $pkgfile $qp_root)
+    startdir=$(dirname $pkgfile)
+    srcdir="${startdir}/src"
+    pkgdir="${startdir}/pkg"
     
     source $pkgfile    
     plain "Handle $pkgname"
@@ -105,5 +105,6 @@ for pkgfile in $@; do
     for f in "${FUNCTION[@]}"; do
         $f;
     done
+    plain ""
 
 done
