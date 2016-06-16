@@ -1,7 +1,7 @@
 export qp_root="${HOME}/Project/p16-5/qp"
 export qp_module="${qp_root}/module"
 
-export PATH="${qp_root}"/usr/bin:"${PATH}"
-export LD_LIBRARY_PATH="${qp_root}"/usr/lib:"${LD_LIBRARY_PATH}"
-export LIBRARY_PATH="${qp_root}"/usr/local/lib:"${LIBRARY_PATH}"
-export PYTHONPATH="${PYTHONPATH}":"${qp_root}"/usr/lib/python2.7/site-packages
+for file in usr/share/bashrc.d/*;
+do
+    source $file
+done
