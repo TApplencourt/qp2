@@ -3,8 +3,8 @@
 pkgname=libinit_int
 pkgver=0.1
 
-source=("integral_bielec.cc")
-depends=('libint' 'eigen')
+source=(integral_bielec.cc)
+depends=(libint)
 
 build() {
 	 g++ -g -O2 -std=c++0x -DHAVE_CONFIG_H integral_bielec.cc  -lint2 -o integral_bielec
