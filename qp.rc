@@ -1,7 +1,7 @@
 export qp_root="${HOME}/Project/p16-5/qp"
 export qp_module="${qp_root}/module"
 
-for file in usr/share/bashrc.d/*;
+for file in ${qp_root}/usr/share/bashrc.d/*;
 do
     source $file
 done
