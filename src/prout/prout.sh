@@ -35,7 +35,7 @@ if [ -n "${qp_root+x}" ]; then
     source $qp_root/src/prout/util.sh
     source $qp_root/src/prout/source.sh
     source $qp_root/src/prout/path.sh
-    source $qp_root/src/prout/dependancy.sh
+    source $qp_root/src/prout/dependency.sh
     source $qp_root/src/prout/message.sh
 else
     echo "Please, source qp.rc"

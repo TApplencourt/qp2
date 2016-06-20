@@ -1,6 +1,3 @@
-#Dependancy 
-# 1.Archaic form of dependency.
-
 check_depend() {
     # Verify is all the module prensend in the depends array have been installed
 

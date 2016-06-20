@@ -1,5 +1,5 @@
-export qp_root="${HOME}/Project/p16-5/qp"
-export qp_module="${qp_root}/module"
+export qp_root="/home/scemama/qp2"
+export qp_module="${qp_root}/modules"
 
 for file in ${qp_root}/usr/share/bashrc.d/*;
 do
