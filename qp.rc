@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export qp_root="/home/scemama/qp2"
+export qp_root="$HOME/qp2"
 export qp_module="${qp_root}/modules"
 
 for file in ${qp_root}/usr/share/bashrc.d/*
