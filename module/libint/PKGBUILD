@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgname=libinit
+pkgname=libint
 pkgver=2.1.0
 pkgdesc="A library for the evaluation of molecular integrals of many-body operators over Gaussian functions"
 url="https://github.com/evaleev/libint"
@@ -12,11 +12,15 @@ build() {
     cd "$srcdir/libint-${pkgver}-stable"
     export CXX="g++"
     export CXXFLAGS=" -O3 -std=c++0x"
-    ./configure --with-cxx-optflags --prefix=${pkgdir}/usr
+    ./configure --with-cxx-optflags --prefix=${pkgdir}/usr 
     make -j 8
 }
 
 package() {
     cd "$srcdir/libint-${pkgver}-stable"
     make PREFIX="${pkgdir}/usr" MANDIR="${pkgdir}/usr/share/man" install
+    #Fix some bug
+    cd ${pkgdir}/usr/include/libint2
+    cp libint2_iface.h libint2_params.h libint2_types.h ../
+    libtool --finish ${pkgdir}/usr/lib
 }
