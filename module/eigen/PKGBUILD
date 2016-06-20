@@ -1,0 +1,12 @@
+#!/bin/bash
+
+pkgname=eigen
+pkgver=3.2.8
+pkgdesc="A C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms."
+url="http://eigen.tuxfamily.org/index.php?title=Main_Page"
+
+source=("${pkgname}-${pkgver}.tar.bz2::http://bitbucket.org/eigen/eigen/get/${pkgver}.tar.bz2")
+
+package() {
+	cp -a ${pkgname}-${pkgver}/Eigen  ${pkgdir}/usr/include
+}
