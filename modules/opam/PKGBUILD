@@ -5,17 +5,16 @@ pkgver=1.2.2
 pkgdesc="OCaml Package Manager"
 url="http://opam.ocaml.org"
 
-packages=("ocamlfind" "zmq")
-
 source=(https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh)
 
 
 package() {
-  mkdir -p $pkgdir/usr/etc/bashrc.d/
-  export OPAMROOT=\$qp_root/usr/local/opam
-  echo "export OPAMROOT=$OPAMROOT" > $pkgdir/usr/etc/bashrc.d/opam
-  source $pkgdir/usr/etc/bashrc.d/opam
-  sh opam_installer.sh "$pkgdir/usr/bin"
-  echo N | $pkgdir/usr/bin/opam config setup -a 
-  $pkgdir/usr/bin/opam install ${packages[@]} -y 
+  mkdir -p ${pkgdir}/usr/share/bashrc.d/
+  export OPAMROOT=\${qp_root}/usr/local/opam
+  echo "export OPAMROOT=${OPAMROOT}" > ${pkgdir}/usr/share/bashrc.d/opam
+  source ${pkgdir}/usr/share/bashrc.d/opam
+  echo N | sh opam_installer.sh "${pkgdir}/usr/bin"
+  ${pkgdir}/usr/bin/opam config setup -a --dot-profile=${pkgdir}/usr/share/bashrc.d/opam 
+  echo
+  warning "To finish the installation, run:\n  source \${qp_root}/qp.rc"
 }
