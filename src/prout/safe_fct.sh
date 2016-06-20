@@ -103,7 +103,7 @@ unsafe_package() {
     fi
 }
 
-unsafe_package() {
+safe_package() {
         safe unsafe_package $@
 }
 
