@@ -9,17 +9,18 @@ IFS=$'\n\t'
 #                   /           _| 
 error_usage() {
 cat << EOF
-Prout.
 
-Usage:
-  prout [-s] [-b] [-p] [-r] [-c] (<PKGBUILD>...)
+PROUT : Package Runtime Optimized User Toolkit
 
-Option:
-    -s  Source 
-    -b  Build
-    -p  Package
-    -r  Remove    (aka unsource and unbuild)
-    -c  clean (aka unpackage)
+USAGE 
+  prout [OPTION] (<PKGBUILD>...)
+
+OPTION 
+    -s, --source    : Download source files
+    -b, --build     : Compile
+    -p, --package   : Install
+    -c, --clean     : Remove temporary files
+    -u, --unpackage : Uninstall
 
 EOF
 exit 1
@@ -35,7 +36,7 @@ if [ -n "${qp_root+x}" ]; then
     source $qp_root/src/prout/util.sh
     source $qp_root/src/prout/source.sh
     source $qp_root/src/prout/path.sh
-    source $qp_root/src/prout/dependancy.sh
+    source $qp_root/src/prout/dependency.sh
     source $qp_root/src/prout/message.sh
 else
     echo "Please, source qp.rc"
@@ -59,11 +60,11 @@ while getopts "sbpuc --long source,build,package,uninstall,clean" opt; do
         p|--package)
             FUNCTION+=("safe_package")
             ;;
-        u|--uninstall)
-            FUNCTION+=("safe_uninstall")
-            ;;
         c|--clean)
             FUNCTION+=("safe_clean")
+            ;;
+        u|--uninstall)
+            FUNCTION+=("safe_uninstall")
             ;;
         *)   
             error_usage

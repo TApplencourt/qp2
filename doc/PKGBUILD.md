@@ -19,9 +19,9 @@ The name of the package. Valid characters are alphanumerics, and any of the foll
 ##### source (array)
 An source files required to build the package. To simplify the maintenance of PKGBUILDs, use the $pkgname variables when specifying the download location, if possible. Compressed files will be extracted automatically in $pkgname. This folder will be created if not existing. 
 
-## Dependancy
+## Dependency
 
-All these dependancy will be checked whenever you will `build` the package. 
+All these dependency will be checked whenever you will `build` the package. 
 
 ##### depends (optional/array)
 An array of packages this package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name. If the package where not in the database, `prout` will check is the package is avalaible via `command -v`.

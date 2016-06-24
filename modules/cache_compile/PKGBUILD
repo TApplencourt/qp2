@@ -7,6 +7,7 @@ url="https://github.com/scemama/cache_compile"
 source=("https://github.com/scemama/cache_compile/archive/master.zip")
 
 depends=(opam)
+ocaml_depends=(ocamlbuild ocamlfind)
 
 build() {
 	cd master

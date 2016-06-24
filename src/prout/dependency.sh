@@ -1,6 +1,3 @@
-#Dependancy 
-# 1.Archaic form of dependency.
-
 check_depend() {
     # Verify is all the module prensend in the depends array have been installed
 
@@ -57,9 +54,9 @@ check_ocaml() {
     fi
 
     for i in "${ocaml_depends[@]}"; do
-        python -c "opam list $i" 2> /dev/null
+        opam list -i "$i" &> /dev/null
         if [ $? -ne 0 ]; then
-            error "$(gettext "Please install '%s' opam package" )" "$i"
+            error "$(gettext "Please install '%s' opam package :\n  opam install %s" )" "$i" "$i"
             exit 1
         fi
     done

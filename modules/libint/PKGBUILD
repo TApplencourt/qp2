@@ -2,11 +2,13 @@
 
 pkgname=libint
 pkgver=2.1.0
-pkgdesc="A library for the evaluation of molecular integrals of many-body operators over Gaussian functions"
+eigname=eigen
+eigver=3.2.8
+pkgdesc="A library for the evaluation of molecular integrals of many-body operators over Gaussian functions. Installs eigen ${eigver}"
 url="https://github.com/evaleev/libint"
 
-source=("https://github.com/evaleev/libint/releases/download/v${pkgver}/libint-${pkgver}-stable.tgz")
-#depends=('zeromq')
+source=("https://github.com/evaleev/libint/releases/download/v${pkgver}/libint-${pkgver}-stable.tgz"
+        "${eigname}-${eigver}.tar.bz2::http://bitbucket.org/eigen/eigen/get/${eigver}.tar.bz2")
 
 build() {
     cd "$srcdir/libint-${pkgver}-stable"
@@ -17,10 +19,11 @@ build() {
 }
 
 package() {
+    cp -a ${eigname}-${eigver}/Eigen  ${pkgdir}/usr/include
     cd "$srcdir/libint-${pkgver}-stable"
     make PREFIX="${pkgdir}/usr" MANDIR="${pkgdir}/usr/share/man" install
     #Fix some bug
     cd ${pkgdir}/usr/include/libint2
     cp libint2_iface.h libint2_params.h libint2_types.h ../
-    libtool --finish ${pkgdir}/usr/lib
 }
+

@@ -1,20 +1,24 @@
+safe() { # If the command fails, exit with code -1
+    $@ || exit -1
+}
+
 safe_depend() {
-    msg "$(gettext "Checking dependancy...")"
+    msg "$(gettext "Checking dependency...")"
 
     if [ -n "${depends+x}" ]; then
-        check_depend
+        safe check_depend
     fi
 
     if [ -n "${python_depends+x}" ]; then
-        check_python
+        safe check_python
     fi
 
     if [ -n "${ocaml_depends+x}" ]; then
-        check_ocaml
+        safe check_ocaml
     fi    
 }
 
-safe_source() {
+unsafe_source() {
     msg "$(gettext "Retrieving sources...")"
 
     if [ -n "${source+x}" ]; then
@@ -50,12 +54,17 @@ safe_source() {
 
 }
 
+safe_source() {
+    safe unsafe_source $@
+}
+
+
 #Build
 safe_build() {
     msg "$(gettext "Building...")"
 
     if fn_exists build; then
-        travel ${srcdir} build
+        safe travel ${srcdir} build
     else
         warning "$(gettext "No build function in PKGBUILD (%s)")" "${startdir}"
     fi
@@ -77,7 +86,7 @@ update_db() {
 }
 
 #Package
-safe_package() {
+unsafe_package() {
     msg "$(gettext "Packaging...")"
 
     if fn_exists package; then
@@ -94,7 +103,11 @@ safe_package() {
     fi
 }
 
-safe_uninstall(){
+safe_package() {
+        safe unsafe_package $@
+}
+
+unsafe_uninstall(){
     msg "$(gettext "Uninstalling...")"
 
     if [ -z $(alexandria installed | grep -w "${pkgname}") ]; then
@@ -111,17 +124,21 @@ safe_uninstall(){
     fi
 }
 
+safe_uninstall(){
+        safe unsafe_uninstall $@
+}
+
 safe_clean(){
     msg "$(gettext "Removing...")"
 
     if [ -d "${pkgdir}" ]; then
-        rm -Rf -- ${pkgdir}
+        safe rm -Rf -- ${pkgdir}
     else
         warning "$(gettext "%s has already been removed")" "${pkgdir}"
     fi
 
      if [ -d "${srcdir}" ]; then
-        rm -Rf -- ${srcdir}
+        safe rm -Rf -- ${srcdir}
     else
         warning "$(gettext "%s has already been removed")" "${srcdir}"
     fi
