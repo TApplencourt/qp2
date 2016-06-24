@@ -45,7 +45,7 @@ class alexandria(object):
     @irpy.lazy_property
     def file_descriptor(self):
         if not os.path.isfile(self.json_file):
-            return open(self.json_file, 'r+')
+            return open(self.json_file, 'w+')
         if self.arg["add"] or self.arg["remove"]:
             return open(self.json_file,"r+")
         else:
