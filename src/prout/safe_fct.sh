@@ -3,7 +3,7 @@ safe() { # If the command fails, exit with code -1
 }
 
 safe_depend() {
-    msg "$(gettext "Checking dependency...")"
+    msg "$(gettext "Checking dependencies...")"
 
     if [ -n "${depends+x}" ]; then
         safe check_depend
@@ -73,7 +73,7 @@ safe_build() {
 update_db() {
     pkg_output=$(find ${pkgdir} \( -type l -o -type f \) -printf '%P\n')
     if [ -z "${pkg_output}" ]; then
-        error "$(gettext "%s have not packaged any file"). Check %s" "${pkgname}" "${pkgdir}"
+        error "$(gettext "%s has not packaged any file"). Check %s" "${pkgname}" "${pkgdir}"
         exit 1
     else
 

@@ -1,10 +1,10 @@
 check_depend() {
-    # Verify is all the module prensend in the depends array have been installed
+    # Verify if all the modules present in the depends array have been installed
 
-    #All the package already installed
+    #All the packages already installed
     installed=$(alexandria installed)
 
-    #Get the package not installed
+    #Get the packages that are not installed
     diff=()
     for i in "${depends[@]}"; do
         skip=
@@ -14,7 +14,7 @@ check_depend() {
         [[ -n $skip ]] || diff+=("$i")
     done
 
-    #Check if the package needed are already installed by the sytem
+    #Check if the needed packages are already installed by the system
     if [ ${#diff[@]} -ne 0 ]; then
 
         not_present=()
@@ -41,7 +41,7 @@ check_python() {
     for i in "${python_depends[@]}"; do
         python -c "import $i" 2> /dev/null
         if [ $? -ne 0 ]; then
-            error "$(gettext "Please install '%s' python module" )" "$i"
+            error "$(gettext "Please install the '%s' python module" )" "$i"
             exit 1
         fi
     done

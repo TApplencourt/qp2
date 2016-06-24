@@ -4,7 +4,7 @@
 Usage:
   dowser <source>
 
-Return the type of file and all the related information
+Returns the type of file and all the related information
 """
 from docopt import docopt
 import os
@@ -31,12 +31,12 @@ def is_archive(full_path):
     else:
         return False
 
-def folder_name(archive):
-    folder_name, ext = os.path.splitext(archive)
+def directory_name(archive):
+    directory_name, ext = os.path.splitext(archive)
     if ext in ['.gz', '.bz2']:
-        folder_name = os.path.splitext(folder_name)[0]
+        directory_name = os.path.splitext(directory_name)[0]
 
-    return folder_name
+    return directory_name
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
@@ -49,8 +49,8 @@ if __name__ == '__main__':
     result= [tos, real_name, user_name]
 
     if is_archive(user_name):
-        folder_name = folder_name(user_name)
-        result.extend(["folder",folder_name])
+        directory_name = directory_name(user_name)
+        result.extend(["directory",directory_name])
     
     print " ".join(result)
     

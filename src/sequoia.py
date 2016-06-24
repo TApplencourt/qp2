@@ -2,7 +2,7 @@
 
 """Usage: sequoia.py [root...] < <graphiz_graph>
 
-We will print all the ancestor of the root from the graphiz_graph
+Prints all the ancestors of the root from the graphiz_graph
 """
 
 import re

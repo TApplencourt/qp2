@@ -24,7 +24,7 @@ travel() {
 function join { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
 
 irp_include() {
-    #In the $srcdir print all folder, and then print put the "-I" between 
+    #In the $srcdir print all directory, and then print put the "-I" between 
     d="$(find $srcdir -maxdepth 1 ! -path $srcdir  -type d ! -path $srcdir/IRPF90_temp ! -path $srcdir/IRPF90_man  -printf "%f\n")"
     if [ -n "${d}" ]; then
         s="$(join ' -I ' $d)"

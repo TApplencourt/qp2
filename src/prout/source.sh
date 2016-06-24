@@ -1,4 +1,4 @@
-# function Extract for common file formats in a folder ($2)
+# function Extract for common file formats in a directory ($2)
 function extract {
  if [ -z "$1" ]; then
     # display usage if no parameters given
@@ -61,7 +61,7 @@ fn_source() {
             if [ ! -f "${target_file}" ]; then
                 wget $url -O ${target_file}
             else
-                 warning "$(gettext "%s file already exist (%s)")" "${array[2]}" "$(fn_abs ${target_file})" 
+                 warning "$(gettext "%s file already exists (%s)")" "${array[2]}" "$(fn_abs ${target_file})" 
             fi
         elif [[ ${array[0]} == "local" ]]; then
 
@@ -71,17 +71,17 @@ fn_source() {
             if [ ! -f "${target_file}" ]; then          
                 rel_symlink "${url}" "${target_file}"
             else
-                warning "$(gettext "%s file already exist (%s)")" "${s}" "${target_file})" 
+                warning "$(gettext "%s file already exists (%s)")" "${s}" "${target_file})" 
             fi
         fi
 
-        if [[ ${#array[@]} -ge 4 && ${array[3]} == "folder" ]] && [ "${no_extract}" -eq 1 ]; then
-            local folder_name=${temp_srcdir}/${array[4]}
+        if [[ ${#array[@]} -ge 4 && ${array[3]} == "directory" ]] && [ "${no_extract}" -eq 1 ]; then
+            local directory_name=${temp_srcdir}/${array[4]}
 
-            if [ ! -d "${folder_name}" ]; then
-                extract_strip ${target_file} ${folder_name}
+            if [ ! -d "${directory_name}" ]; then
+                extract_strip ${target_file} ${directory_name}
             else
-                warning "$(gettext "%s folder already exist (%s)")" "${array[4]}" "${folder_name})" 
+                warning "$(gettext "%s directory already exists (%s)")" "${array[4]}" "${directory_name})" 
             fi
         fi
 
