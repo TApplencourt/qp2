@@ -12,3 +12,6 @@ cat << EOF >> ${qp_root}/.git/config
 EOF
 ```
 
+# Utilisation
+
+source `qp.rc`
