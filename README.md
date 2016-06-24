@@ -1,11 +1,7 @@
 Quantum Package version 2
 =========================
 
-
-
 # Installation
-
-Change `qp.rc` and source it.
 
 If you plan to modify the code :
 
