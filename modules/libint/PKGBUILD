@@ -22,8 +22,12 @@ package() {
     cp -a ${eigname}-${eigver}/Eigen  ${pkgdir}/usr/include
     cd "$srcdir/libint-${pkgver}-stable"
     make PREFIX="${pkgdir}/usr" MANDIR="${pkgdir}/usr/share/man" install
+
     #Fix some bug
     cd ${pkgdir}/usr/include/libint2
     cp libint2_iface.h libint2_params.h libint2_types.h ../
+
+    mkdir -p ${pkgdir}/usr/share/bashrc.d/
+    echo "export LIBINT_DATA_PATH=\$qp_root/usr/share/libint/2.1.0-beta/basis/" > $pkgdir/usr/share/bashrc.d/libint
 }
 
