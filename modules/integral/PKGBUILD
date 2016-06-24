@@ -6,6 +6,11 @@ pkgver=0.1
 source=(integral_bielec.cc)
 depends=(libint)
 
+docs="USAGE: integral_bielec <xyz_path> <basis>
+      <basis> are in g94 format.
+	  NOTE : basis need to be present in $LIBINT_DATA_PATH
+	         The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/"
+
 build() {
 	 g++ -g -O2 -std=c++0x -DHAVE_CONFIG_H integral_bielec.cc  -lint2 -o integral_bielec
 }
