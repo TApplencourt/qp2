@@ -4,17 +4,14 @@
 #include <errno.h>
 #include <sys/mman.h>
 #include <getopt.h>
-#include <sys/stat.h> 
+#include <sys/stat.h>
 
 using namespace std;
 
-
 typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        Matrix;  // import dense, dynamically sized Matrix type from Eigen;
-                 // this is a matrix with row-major storage (http://en.wikipedia.org/wiki/Row-major_order)
-                 // to meet the layout of the integrals returned by the Libint integral library
-
-
+    Matrix; // import dense, dynamically sized Matrix type from Eigen;
+// this is a matrix with row-major storage (http://en.wikipedia.org/wiki/Row-major_order)
+// to meet the layout of the integrals returned by the Libint integral library
 
 /***
  *                            
@@ -23,20 +20,14 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
  *                            
  */
 
-
 // BOROWED FROM LIBINT Hartree-Fock
-using libint2::Shell;
 using libint2::Atom;
 using libint2::BasisSet;
 
 Matrix compute_schwartz_ints(const BasisSet& bs1,
-                             const BasisSet& bs2 = BasisSet(),
-                             bool use_2norm = false // use infty norm by default
-                            );
-
-// computes norm of shell-blocks of A
-Matrix compute_shellblock_norm(const BasisSet& obs,
-                               const Matrix& A);
+    const BasisSet& bs2 = BasisSet(),
+    bool use_2norm = false // use infty norm by default
+    );
 
 // The is the data  structure who will be stored in the memory map
 struct IntQuartet {
@@ -263,44 +254,44 @@ void save_buffer(IntQuartet* map,
     }
 }
 
-
 // cp from Hartree-Fock libint (remove opemmp stuff)
 Matrix compute_schwartz_ints(const BasisSet& bs1,
-                             const BasisSet& _bs2,
-                             bool use_2norm) {
-  const BasisSet& bs2 = (_bs2.empty() ? bs1 : _bs2);
-  const auto nsh1 = bs1.size();
-  const auto nsh2 = bs2.size();
-  const auto bs1_equiv_bs2 = (&bs1 == &bs2);
+    const BasisSet& _bs2,
+    bool use_2norm)
+{
+    const BasisSet& bs2 = (_bs2.empty() ? bs1 : _bs2);
+    const auto nsh1 = bs1.size();
+    const auto nsh2 = bs2.size();
+    const auto bs1_equiv_bs2 = (&bs1 == &bs2);
 
-  Matrix K = Matrix::Zero(nsh1,nsh2);
+    Matrix K = Matrix::Zero(nsh1, nsh2);
 
-  // construct the 2-electron repulsion integrals engine
-  libint2::TwoBodyEngine<libint2::Coulomb> engines(bs1.max_nprim(), bs2.max_l(), 0);
-  engines.set_precision(0.); // !!! very important: cannot screen primitives in Schwartz computation !!!
+    // construct the 2-electron repulsion integrals engine
+    libint2::TwoBodyEngine<libint2::Coulomb> engines(bs1.max_nprim(), bs2.max_l(), 0);
+    engines.set_precision(0.); // !!! very important: cannot screen primitives in Schwartz computation !!!
 
     // loop over permutationally-unique set of shells
-    for(auto s1=0l, s12=0l; s1!=nsh1; ++s1) {
+    for (auto s1 = 0l, s12 = 0l; s1 != nsh1; ++s1) {
 
-      auto n1 = bs1[s1].size();// number of basis functions in this shell
+        auto n1 = bs1[s1].size(); // number of basis functions in this shell
 
-      auto s2_max = bs1_equiv_bs2 ? s1 : nsh2-1;
-      for(auto s2=0; s2<=s2_max; ++s2, ++s12) {
+        auto s2_max = bs1_equiv_bs2 ? s1 : nsh2 - 1;
+        for (auto s2 = 0; s2 <= s2_max; ++s2, ++s12) {
 
-        auto n2 = bs2[s2].size();
-        auto n12 = n1*n2;
+            auto n2 = bs2[s2].size();
+            auto n12 = n1 * n2;
 
-        const auto* buf = engines.compute(bs1[s1], bs2[s2], bs1[s1], bs2[s2]);
+            const auto* buf = engines.compute(bs1[s1], bs2[s2], bs1[s1], bs2[s2]);
 
-        // the diagonal elements are the Schwartz ints ... use Map.diagonal()
-        Eigen::Map<const Matrix> buf_mat(buf, n12, n12);
-        auto norm2 = use_2norm ? buf_mat.diagonal().norm() : buf_mat.diagonal().lpNorm<Eigen::Infinity>();
-        K(s1,s2) = std::sqrt(norm2);
-        if (bs1_equiv_bs2) K(s2,s1) = K(s1,s2);
-
-      }
+            // the diagonal elements are the Schwartz ints ... use Map.diagonal()
+            Eigen::Map<const Matrix> buf_mat(buf, n12, n12);
+            auto norm2 = use_2norm ? buf_mat.diagonal().norm() : buf_mat.diagonal().lpNorm<Eigen::Infinity>();
+            K(s1, s2) = std::sqrt(norm2);
+            if (bs1_equiv_bs2)
+                K(s2, s1) = K(s1, s2);
+        }
     }
-  return K;
+    return K;
 }
 /***
  *                    
@@ -309,7 +300,8 @@ Matrix compute_schwartz_ints(const BasisSet& bs1,
  *                    
  */
 
-void print_usage() {
+void print_usage()
+{
     printf("INTREGRAL_BIELECT : Compute the bielectronique integral.\n");
     printf("   For each possible permutation of i,j,k,l giving the same integral,\n");
     printf("   only one arbitrary version is stored in the memory map\n");
@@ -319,16 +311,14 @@ void print_usage() {
 
     printf("\nOPTION\n");
     printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
-    printf("    -b, --basis <name>   : The name of the basis set in 94 format\n"); 
-    printf("    -m, --mmap  <name>   : The location where the memory map will be created\n");                                        
+    printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
+    printf("    -m, --mmap  <name>   : The location where the memory map will be created\n");
 
     printf("\nNOTA BENE\n");
-    printf( "  The basis set need to be present in $LIBINT_DATA_PATH\n");
-    printf( "  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
-    printf( "  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
+    printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
+    printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
+    printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
 }
-
-
 
 int main(int argc, char* argv[])
 {
@@ -339,51 +329,48 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
     /*** Sanitze input               ***/
     /*** =========================== ***/
-    static struct option long_options[] =
-       {
-         /* These options set a flag. */
-         {"help",   no_argument,       0, 'h'},
-         {"xyz",    required_argument, 0, 'x'},
-         {"basis",  required_argument, 0, 'b'},
-         {"mmap",   required_argument, 0, 'm'},
-         {0,        0,                 0, 0 }
-       };
+    static struct option long_options[] = {
+        /* These options set a flag. */
+        { "help", no_argument, 0, 'h' },
+        { "xyz", required_argument, 0, 'x' },
+        { "basis", required_argument, 0, 'b' },
+        { "mmap", required_argument, 0, 'm' },
+        { 0, 0, 0, 0 }
+    };
 
     const double precision = 1e-8;
 
     int index;
-    int iarg=0;
-    
+    int iarg = 0;
+
     //turn off getopt error message
-    opterr=1; 
+    opterr = 1;
 
     string xyz_path;
     string basis_name;
     string mmap_path;
 
-    while( (iarg = getopt_long(argc, argv, "hx:b:m:", long_options, &index)) != -1)
-    {
+    while ((iarg = getopt_long(argc, argv, "hx:b:m:", long_options, &index)) != -1) {
 
-       switch (iarg)
-    {
-      case 'h':
-        return 0;
-      case 'x':
-        xyz_path = optarg;
-        break;
-      case 'b':
-        basis_name = optarg;
-        break;
-      case 'm':
-        mmap_path = optarg;
-        break;
-      default:
-        print_usage();
-        return 1;
-    }
+        switch (iarg) {
+        case 'h':
+            return 0;
+        case 'x':
+            xyz_path = optarg;
+            break;
+        case 'b':
+            basis_name = optarg;
+            break;
+        case 'm':
+            mmap_path = optarg;
+            break;
+        default:
+            print_usage();
+            return 1;
+        }
     }
 
-    if (xyz_path.empty() || basis_name.empty() || mmap_path.empty() ){
+    if (xyz_path.empty() || basis_name.empty() || mmap_path.empty()) {
         print_usage();
         return 1;
     }
@@ -392,21 +379,21 @@ int main(int argc, char* argv[])
     /*** initialize molecule         ***/
     /*** =========================== ***/
     struct stat buffer;
-    if (stat (xyz_path.c_str(), &buffer) != 0) {
+    if (stat(xyz_path.c_str(), &buffer) != 0) {
         printf("%s:\n", xyz_path);
         perror("The xyz file do not exists");
         return 1;
     }
-    
+
     ifstream input_file(xyz_path);
-    vector<libint2::Atom> atoms = libint2::read_dotxyz(input_file);
+    vector<Atom> atoms = libint2::read_dotxyz(input_file);
 
     /*** =========================== ***/
     /*** create basis set            ***/
     /*** =========================== ***/
     // export LIBINT_DATA_PATH="$qp_root"/usr/share/libint/2.1.0-beta/basis/
 
-    libint2::BasisSet obs(basis_name, atoms);
+    BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
     const auto nshell = obs.size();
@@ -420,7 +407,6 @@ int main(int argc, char* argv[])
     IntQuartet* map = init_mmap(mmap_path, bytes); // do not use map before this
     libint2::init(); // do not use libint before this
 
-
     /*** ============================ **/
     /*** Compute schwartz             **/
     /*** ============================ **/
@@ -429,7 +415,6 @@ int main(int argc, char* argv[])
     // We do not compute the matrix of norms of shell blocks
     const auto Schwartz = compute_schwartz_ints(obs);
     const auto do_schwartz_screen = Schwartz.cols() != 0 && Schwartz.rows() != 0;
-
 
     /*** ============================ **/
     /*** Compute shell quartet        **/
@@ -440,9 +425,8 @@ int main(int argc, char* argv[])
     libint2::TwoBodyEngine<libint2::Coulomb> coulomb_engine(obs.max_nprim(),
         obs.max_l(), 0);
 
-
-    coulomb_engine.set_precision(std::min(precision,std::numeric_limits<double>::epsilon())); // shellset-dependent precision control will likely break positive definiteness
-                                       // stick with this simple recipe
+    coulomb_engine.set_precision(std::min(precision, std::numeric_limits<double>::epsilon())); // shellset-dependent precision control will likely break positive definiteness
+    // stick with this simple recipe
 
     auto shell2bf = obs.shell2bf(); // maps shell index to basis function index
     // shell2bf[0] = index of the first basis function in shell 0
@@ -465,8 +449,8 @@ int main(int argc, char* argv[])
 
                 for (auto s4 = 0; s4 <= s4_max; ++s4) {
 
-                    if (Schwartz(s1,s2) * Schwartz(s3,s4) < precision)
-                      continue;
+                    if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
+                        continue;
 
                     auto bf4_first = shell2bf[s4];
                     auto n4 = obs[s4].size();
