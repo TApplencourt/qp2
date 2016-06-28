@@ -337,19 +337,15 @@ int main(int argc, char* argv[])
         { "mmap", required_argument, 0, 'm' },
         { 0, 0, 0, 0 }
     };
-
     const double precision = 1e-8;
-
-    int index;
-    int iarg = 0;
-
-    //turn off getopt error message
-    opterr = 1;
 
     string xyz_path;
     string basis_name;
     string mmap_path;
 
+    int iarg = 0;
+    //switch getopt error message
+    opterr = 1;
     while ((iarg = getopt_long(argc, argv, "hx:b:m:", long_options, &index)) != -1) {
 
         switch (iarg) {
