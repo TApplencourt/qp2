@@ -1,0 +1,33 @@
+#!/bin/bash
+
+pkgname=ebsel
+pkgver=0.1
+pkgdesc="Local Copy of the EMSL Basis Set Exchange site"
+url="https://github.com/jaimergp/ebsel"
+source=('https://github.com/jaimergp/ebsel/archive/master.zip')
+
+python_depends=('docopt')
+
+build() {
+	cd master
+        python setup.py build
+}
+
+package() {
+	cd master
+	for i in $(echo "${PYTHONPATH/$qp_root/$pkgdir}" | tr ':' '\n')
+	do
+		if [[ $(echo $i | grep "$qp_root") > /dev/null ]]
+		then
+			PDIR=$i
+		fi
+	done
+	if [[ -z $PDIR ]]
+	then
+		error "Error in PYTHONPATH"
+		exit 1
+	fi
+	export PYTHONPATH=$PDIR
+	mkdir -p $PDIR
+	python setup.py install --prefix=$pkgdir/usr/
+}
