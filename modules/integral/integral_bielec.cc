@@ -1,3 +1,5 @@
+#include <zmq.h>
+#include <set>
 #include <libint2.hpp>
 #include <string>
 #include <fcntl.h>
@@ -24,6 +26,8 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 using libint2::Atom;
 using libint2::BasisSet;
 
+const double precision = 1e-15;
+
 Matrix compute_schwartz_ints(const BasisSet& bs1,
     const BasisSet& bs2 = BasisSet(),
     bool use_2norm = false // use infty norm by default
@@ -35,22 +39,6 @@ struct IntQuartet {
     double value;
 };
 
-/**
-    Create the memory map file
-
-    @param filename  the location of the memory map in disk
-           bytes     An uperbound of the  size of the memory map
-    @return A memore map
-*/
-IntQuartet* init_mmap(const char* filename, const size_t bytes);
-
-/**
-    Close the memory map file
-
-    @param filename  the memory map.
-           bytes     An uperbound of the  size of the memory map
-*/
-void finalize_mmap(IntQuartet* map, const size_t bytes);
 
 /**
     For a (ij|kl) integral quarter (starting with 0) return a unique id.
@@ -82,7 +70,7 @@ void save_quartet(IntQuartet* map,
             n{1,4} the number of AO in (mn,rs) respectively
             bf{1,4}_first the index of the first basis function in thhis shell
 */
-void save_buffer(IntQuartet* map,
+void send_buffer(void* push_socket, int task_id,
     const short int n1, const short int n2, const short int n3, const short int n4,
     const short int bf1_first, const short int bf2_first, const short int bf3_first, const short int bf4_first,
     const double* buf_1234);
@@ -94,66 +82,6 @@ void save_buffer(IntQuartet* map,
  *               |                                            
  */
 
-IntQuartet* init_mmap(const char* filename, const size_t bytes)
-{
-    /**
-  1- Create the file descriptor
-  2- Strech the file
-  3- Create the mmap
-  4 - Close the file descriptor
-
-  Standard Error:
-  EACCES
-  A file descriptor refers to a non-regular file.
-  Or MAP_PRIVATE was requested, but fd is not open for reading.
-  Or MAP_SHARED was requested and PROT_WRITE is set, but fd is not open in read/write (O_RDWR) mode.
-  Or PROT_WRITE is set, but the file is append-only.
-  */
-
-    // Create file descriptor (chmod 600 file – owner can read and write)
-    const int fd = open(filename, O_RDWR | O_CREAT, (mode_t)0600);
-    if (fd == -1) {
-        printf("%s:\n", filename);
-        perror("Error opening mmap file for writing only");
-        exit(EXIT_FAILURE);
-    }
-
-    // Stretch the file
-    // The sparse file takes up zero space, since the file system
-    //  was smart enough to recognize that it only contains zeroes
-    if (lseek(fd, bytes, SEEK_SET) == -1) {
-        close(fd);
-        printf("%s:\n", filename);
-        perror("Error calling lseek() to stretch the file");
-        exit(EXIT_FAILURE);
-    }
-    if (write(fd, "", 1) != 1) {
-        close(fd);
-        printf("%s:\n", filename);
-        perror("Error writing last byte of the file");
-        exit(EXIT_FAILURE);
-    }
-
-    // Create the actual memory map
-    IntQuartet* map = (IntQuartet*)mmap(NULL, bytes, PROT_WRITE, MAP_SHARED, fd, 0);
-    if (map == MAP_FAILED) {
-        perror("mmap failed to be created");
-        exit(EXIT_FAILURE);
-    }
-    // Close the file descriptor. We dont need it anymore
-    close(fd);
-
-    return map;
-}
-
-void finalize_mmap(IntQuartet* map, const size_t bytes)
-{
-
-    if (munmap(map, bytes) == -1) {
-        perror("Error un-mmapping the file");
-        exit(EXIT_FAILURE);
-    }
-}
 
 long int
 bielec_integrals_index(const short int i, const short int j, const short int k, const short int l)
@@ -172,33 +100,16 @@ bielec_integrals_index(const short int i, const short int j, const short int k, 
     return i1 + ((i2 * i2 - i2) >> 1);
 }
 
-void save_quartet(IntQuartet* map,
-    const long int kk,
-    const short int i,
-    const short int j,
-    const short int k,
-    const short int l,
-    const double value)
-{
 
-    //Create the struct and save it ine the array
-    map[kk].i = i;
-    map[kk].j = j;
-    map[kk].k = k;
-    map[kk].l = l;
-    map[kk].value = value;
-
-    // Print for debuging
-    cout << " " << kk
-         << "  " << i << " " << j << " " << k << " " << l
-         << " " << value << endl;
-}
-
-void save_buffer(IntQuartet* map,
+void send_buffer(void* push_socket, int task_id,
     const short int n1, const short int n2, const short int n3, const short int n4,
     const short int bf1_first, const short int bf2_first, const short int bf3_first, const short int bf4_first,
     const double* buf_1234)
 {
+    int n_integrals = 0;
+    const size_t n_integrals_max = n1*n2*n3*n4;
+    long int *buffer_i = (long int*) malloc (n_integrals_max*sizeof(long int));
+    double *buffer_value = (double*) malloc (n_integrals_max*sizeof(double));
     /**
           loop over all the basis function in the buffer
           If all the shell in the quartet are different,
@@ -208,19 +119,19 @@ void save_buffer(IntQuartet* map,
     if (n1 != n2 && n1 != n3 && n1 != n4 && n2 != n3 && n2 != n4 && n3 != n4) {
 
         for (auto f1 = 0, f1234 = 0; f1 != n1; ++f1) {
-            auto bf1 = f1 + bf1_first;
+            const auto bf1 = f1 + bf1_first;
             for (auto f2 = 0; f2 != n2; ++f2) {
-                auto bf2 = f2 + bf2_first;
+                const auto bf2 = f2 + bf2_first;
                 for (auto f3 = 0; f3 != n3; ++f3) {
-                    auto bf3 = f3 + bf3_first;
+                    const auto bf3 = f3 + bf3_first;
                     for (auto f4 = 0; f4 != n4; ++f4, ++f1234) {
-                        auto bf4 = f4 + bf4_first;
+                        const auto bf4 = f4 + bf4_first;
 
-                        auto key = bielec_integrals_index(bf1, bf2, bf3, bf4);
-
-                        if (buf_1234[f1234] != 0.)
-                            // WARNING key cause a lot a random acess
-                            save_quartet(map, key, bf1, bf2, bf3, bf4, buf_1234[f1234]);
+                        if (fabs(buf_1234[f1234]) > precision) {
+                          buffer_i[n_integrals] = bielec_integrals_index(bf1, bf2, bf3, bf4);
+                          buffer_value[n_integrals] = buf_1234[f1234];
+                          n_integrals += 1;
+                        }
                     }
                 }
             }
@@ -229,29 +140,60 @@ void save_buffer(IntQuartet* map,
     else {
 
         //Vector to store the uniq key of the quartet
-        vector<long int> uniq(n1 * n2 * n3 * n4);
+        set<long int> uniq;
 
         for (auto f1 = 0, f1234 = 0; f1 != n1; ++f1) {
-            auto bf1 = f1 + bf1_first;
+            const auto bf1 = f1 + bf1_first;
             for (auto f2 = 0; f2 != n2; ++f2) {
-                auto bf2 = f2 + bf2_first;
+                const auto bf2 = f2 + bf2_first;
                 for (auto f3 = 0; f3 != n3; ++f3) {
-                    auto bf3 = f3 + bf3_first;
+                    const auto bf3 = f3 + bf3_first;
                     for (auto f4 = 0; f4 != n4; ++f4, ++f1234) {
-                        auto bf4 = f4 + bf4_first;
-                        auto key = bielec_integrals_index(bf1, bf2, bf3, bf4);
+                        const auto bf4 = f4 + bf4_first;
+                        const auto key = bielec_integrals_index(bf1, bf2, bf3, bf4);
 
                         //Check if the quartet have been already computed
-                        if (find(uniq.begin(), uniq.end(), key) == uniq.end() and buf_1234[f1234] != 0.) {
-                            // WARNING key cause a lot a random acess
-                            save_quartet(map, key, bf1, bf2, bf3, bf4, buf_1234[f1234]);
-                            uniq.push_back(key);
+                        if ( (uniq.find(key) == uniq.end())
+                        && (fabs(buf_1234[f1234]) > precision)) {
+                            uniq.insert(key);
+                            buffer_i[n_integrals] = key;
+                            buffer_value[n_integrals] = buf_1234[f1234];
+                            n_integrals += 1;
                         }
                     }
                 }
             }
         }
     }
+    int rc;
+    rc = zmq_send(push_socket, &n_integrals, 4, ZMQ_SNDMORE);
+    if (rc != 4) {
+      perror("Error pushing n_integrals");
+      exit(EXIT_FAILURE);
+    }
+
+    int msg_len = n_integrals*sizeof(long int);
+    rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
+    if (rc != msg_len) {
+      perror("Error pushing buffer_i");
+      exit(EXIT_FAILURE);
+    }
+
+    msg_len = n_integrals*sizeof(double);
+    rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
+    if (rc != msg_len) {
+      perror("Error pushing buffer_value");
+      exit(EXIT_FAILURE);
+    }
+
+    rc = zmq_send(push_socket, &task_id, 4, 0);
+    if (rc != 4) {
+      perror("Error pushing task_id");
+      exit(EXIT_FAILURE);
+    }
+
+    free(buffer_i);
+    free(buffer_value);
 }
 
 // cp from Hartree-Fock libint (remove opemmp stuff)
@@ -312,7 +254,7 @@ void print_usage()
     printf("\nOPTION\n");
     printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
     printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
-    printf("    -m, --mmap  <name>   : The location where the memory map will be created\n");
+    printf("    -a, --address <name> : The address of the task server\n");
 
     printf("\nNOTA BENE\n");
     printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
@@ -332,33 +274,37 @@ int main(int argc, char* argv[])
     static struct option long_options[] = {
         /* These options set a flag. */
         { "help", no_argument, 0, 'h' },
+        { "task", no_argument, 0, 't' },
+        { "address", required_argument, 0, 'a' },
         { "xyz", required_argument, 0, 'x' },
         { "basis", required_argument, 0, 'b' },
-        { "mmap", required_argument, 0, 'm' },
         { 0, 0, 0, 0 }
     };
-    const double precision = 1e-8;
 
     string xyz_path;
     string basis_name;
-    string mmap_path;
+    string qp_run_address;
+    int do_task = 0;
 
     int iarg = 0;
     //switch getopt error message
     opterr = 1;
-    while ((iarg = getopt_long(argc, argv, "hx:b:m:", long_options, NULL)) != -1) {
+    while ((iarg = getopt_long(argc, argv, "ha:tx:b:m:", long_options, NULL)) != -1) {
 
         switch (iarg) {
         case 'h':
             return 0;
+        case 't':
+            do_task = 1;
+            break;
+        case 'a':
+            qp_run_address = optarg;
+            break;
         case 'x':
             xyz_path = optarg;
             break;
         case 'b':
             basis_name = optarg;
-            break;
-        case 'm':
-            mmap_path = optarg;
             break;
         default:
             print_usage();
@@ -366,7 +312,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (xyz_path.empty() || basis_name.empty() || mmap_path.empty()) {
+    if (xyz_path.empty() || basis_name.empty() || qp_run_address.empty()) {
         print_usage();
         return 1;
     }
@@ -397,11 +343,8 @@ int main(int argc, char* argv[])
     const auto unao = 0.25 * nao * (nao + 1) * (0.5 * nao * (nao + 1) + 1);
     const size_t bytes = unao * sizeof(IntQuartet);
 
-    /*** ============================ **/
-    /*** mmap dirname                 **/
-    /*** ============================ **/
-    IntQuartet* map = init_mmap(mmap_path.c_str(), bytes); // do not use map before this
     libint2::init(); // do not use libint before this
+
 
     /*** ============================ **/
     /*** Compute schwartz             **/
@@ -410,60 +353,166 @@ int main(int argc, char* argv[])
     // WARNING: NOT SUR IF THIS WORK
     // We do not compute the matrix of norms of shell blocks
     const auto Schwartz = compute_schwartz_ints(obs);
-    const auto do_schwartz_screen = Schwartz.cols() != 0 && Schwartz.rows() != 0;
+    
 
-    /*** ============================ **/
-    /*** Compute shell quartet        **/
-    /*** ============================ **/
-    /*TODO
-    * compute MN shell pair for beter load ballensing
-    */
-    libint2::TwoBodyEngine<libint2::Coulomb> coulomb_engine(obs.max_nprim(),
-        obs.max_l(), 0);
+    /*** ======= **/
+    /*** ZeroMQ  **/
+    /*** ======= **/
 
-    coulomb_engine.set_precision(std::min(precision, std::numeric_limits<double>::epsilon())); // shellset-dependent precision control will likely break positive definiteness
-    // stick with this simple recipe
+    int rc;
+    void *context = zmq_ctx_new ();  // Do not use ZeroMQ before this
+    void *qp_run_socket = zmq_socket (context, ZMQ_REQ);
+    rc = zmq_connect(qp_run_socket,qp_run_address.c_str());
+    if (rc != 0) {
+      perror("Error connecting the socket");
+      exit(EXIT_FAILURE);
+    }
+    
 
-    auto shell2bf = obs.shell2bf(); // maps shell index to basis function index
-    // shell2bf[0] = index of the first basis function in shell 0
-    // shell2bf[1] = index of the first basis function in shell 1
-    // ...
+    char msg[512];
+    int msg_len;
 
-    for (auto s1 = 0l, s1234 = 0l; s1 != nshell; ++s1) {
-        auto bf1_first = shell2bf[s1]; // first basis function in this shell
-        auto n1 = obs[s1].size(); // number of basis functions in this shell
-
-        for (auto s2 = 0; s2 <= s1; ++s2) {
-            auto bf2_first = shell2bf[s2];
-            auto n2 = obs[s2].size();
-
-            for (auto s3 = 0; s3 <= s1; ++s3) {
-                auto bf3_first = shell2bf[s3];
-                auto n3 = obs[s3].size();
-
-                const auto s4_max = (s1 == s3) ? s2 : s3;
-
-                for (auto s4 = 0; s4 <= s4_max; ++s4) {
-
-                    if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
-                        continue;
-
-                    auto bf4_first = shell2bf[s4];
-                    auto n4 = obs[s4].size();
-
-                    const auto* buf_1234 = coulomb_engine.compute(obs[s1], obs[s2], obs[s3], obs[s4]);
-
-                    if (buf_1234 != nullptr)
-                        save_buffer(map,
-                            n1, n2, n3, n4,
-                            bf1_first, bf2_first, bf3_first, bf4_first,
-                            buf_1234);
+    if (do_task) {
+        /*TODO
+        * compute MN shell pair for better load balancing
+        */
+        for (auto s1 = 0l, s1234 = 0l; s1 != nshell; ++s1) {
+            for (auto s2 = 0; s2 <= s1; ++s2) {
+                for (auto s3 = 0; s3 <= s1; ++s3) {
+                    const auto s4_max = (s1 == s3) ? s2 : s3;
+                    for (auto s4 = 0; s4 <= s4_max; ++s4) {
+                        if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
+                            continue;
+                        sprintf(msg,"add_task ao_integrals %6d %6d %6d %6d",s1,s2,s3,s4);
+                        rc = zmq_send(qp_run_socket, msg, 50, 0);
+                        if (rc != 50) {
+                          perror("Error sending the task");
+                          exit(EXIT_FAILURE);
+                        }
+                        rc = zmq_recv(qp_run_socket, msg, 510, 0);
+                        if (rc != 2) {
+                          perror(msg);
+                          exit(EXIT_FAILURE);
+                        }
+                    }
                 }
             }
         }
+    } else {
+
+    
+        libint2::TwoBodyEngine<libint2::Coulomb> coulomb_engine(obs.max_nprim(), obs.max_l(), 0);
+
+        coulomb_engine.set_precision(std::min(precision, std::numeric_limits<double>::epsilon())); // shellset-dependent precision control will likely break positive definiteness
+        // stick with this simple recipe
+
+        auto shell2bf = obs.shell2bf(); // maps shell index to basis function index
+        // shell2bf[0] = index of the first basis function in shell 0
+        // shell2bf[1] = index of the first basis function in shell 1
+        // ...
+
+       
+       rc = zmq_send(qp_run_socket, "connect tcp", 11, 0);
+       if (rc != 11) {
+         perror("Error connecting to the task server");
+         exit(EXIT_FAILURE);
+       }
+
+       rc = zmq_recv(qp_run_socket, msg, 510, 0);
+       msg[rc] = '\0';
+       char reply[32], state[32], push_address[128];
+       int worker_id;
+       sscanf(msg, "%s %s %d %s", reply, state, &worker_id, push_address);
+       if (strcmp(reply,"connect_reply")) {
+         perror("Bad reply");
+         exit(EXIT_FAILURE);
+       }
+       if (strcmp(state,"ao_integrals")) {
+         perror("Bad state");
+         exit(EXIT_FAILURE);
+       }
+
+       void *push_socket = zmq_socket (context, ZMQ_PUSH);
+       rc = zmq_connect(push_socket,push_address);
+       if (rc != 0) {
+         perror("Error connecting the push socket");
+         exit(EXIT_FAILURE);
+       }
+
+       int task_id;
+       while (1) {
+          sprintf(msg,"get_task ao_integrals %8d",worker_id);
+          rc = zmq_send(qp_run_socket,msg,30,0);
+          if (rc != 30) {
+            perror("Error connecting the push socket");
+            exit(EXIT_FAILURE);
+          }
+          rc = zmq_recv(qp_run_socket,msg,510,0);
+          msg[rc] = '\0';
+          int s1, s2, s3, s4;
+          sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
+          if (task_id == 0) break;
+          
+          auto bf1_first = shell2bf[s1]; // first basis function in this shell
+          auto n1 = obs[s1].size(); // number of basis functions in this shell
+
+          auto bf2_first = shell2bf[s2];
+          auto n2 = obs[s2].size();
+
+          auto bf3_first = shell2bf[s3];
+          auto n3 = obs[s3].size();
+
+          auto bf4_first = shell2bf[s4];
+          auto n4 = obs[s4].size();
+
+          const auto* buf_1234 = coulomb_engine.compute(obs[s1], obs[s2], obs[s3], obs[s4]);
+
+          sprintf(msg,"task_done ao_integrals %d %d",worker_id,task_id);
+          msg_len = strlen(msg);
+          rc = zmq_send(qp_run_socket,msg,msg_len,0);
+          if (rc != msg_len) {
+            perror("Error sending task_done");
+            exit(EXIT_FAILURE);
+          }
+          rc = zmq_recv(qp_run_socket,msg,510,0);
+          if (rc != 2) {
+            perror(msg);
+            exit(EXIT_FAILURE);
+          }
+
+          send_buffer(push_socket, task_id,
+                      n1, n2, n3, n4,
+                      bf1_first, bf2_first, bf3_first, bf4_first,
+                      buf_1234);
+
+
+        }
+
+        sprintf(msg,"disconnect ao_integrals %d",worker_id);
+        msg_len = strlen(msg);
+        rc = zmq_send(qp_run_socket,msg,msg_len,0);
+        if (rc != msg_len) {
+          perror("Error sending disconnect");
+          exit(EXIT_FAILURE);
+        }
+        rc = zmq_recv(qp_run_socket,msg,510,0);
+        sscanf(msg, "%s %s", reply, state);
+        if (strcmp(reply,"disconnect_reply") || strcmp(state,"ao_integrals")) {
+          perror(msg);
+          exit(EXIT_FAILURE);
+        }
+        
+        rc = zmq_disconnect(push_socket,push_address);
+        rc = zmq_setsockopt(push_socket,ZMQ_LINGER,0,4);
+        rc = zmq_close(push_socket);
+
     }
 
+    rc = zmq_disconnect(qp_run_socket,qp_run_address.c_str());
+    rc = zmq_setsockopt(qp_run_socket,ZMQ_LINGER,0,4);
+    rc = zmq_close(qp_run_socket);
+
     libint2::finalize(); // do not use libint after this
-    finalize_mmap(map, bytes); // do not use map after this
     return 0;
 }
+
