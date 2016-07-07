@@ -26,18 +26,13 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 using libint2::Atom;
 using libint2::BasisSet;
 
-const double precision = 1e-15;
+//const double precision = 1e-15;
+const double precision = -1e-15;
 
 Matrix compute_schwartz_ints(const BasisSet& bs1,
     const BasisSet& bs2 = BasisSet(),
     bool use_2norm = false // use infty norm by default
     );
-
-// The is the data  structure who will be stored in the memory map
-struct IntQuartet {
-    short int i, j, k, l;
-    double value;
-};
 
 
 /**
@@ -46,21 +41,8 @@ struct IntQuartet {
     @param i,j,k,l  the indice of the basis shell function
     @return A uniq key
 */
-long int bielec_integrals_index(const short int i, const short int j, const short int k, const short int l);
+long int bielec_integrals_index(const int i, const int j, const int k, const int l);
 
-/**
-    For a (ij|kl) integral quarter key, and this value
-    save it in the map at the indice kk
-
-    @param map      the  map array
-           kk       the indice in the memory map
-           i,j,k,l  the indice of the basis shell function
-           value    the value of the integrals
-*/
-void save_quartet(IntQuartet* map,
-    const long int kk,
-    const short int i, const short int j, const short int k, const short int l,
-    const double value);
 
 /**
     For a (mn|rs) shell integrals stored in a buffer
@@ -71,8 +53,8 @@ void save_quartet(IntQuartet* map,
             bf{1,4}_first the index of the first basis function in thhis shell
 */
 void send_buffer(void* push_socket, int task_id,
-    const short int n1, const short int n2, const short int n3, const short int n4,
-    const short int bf1_first, const short int bf2_first, const short int bf3_first, const short int bf4_first,
+    const int n1, const int n2, const int n3, const int n4,
+    const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234);
 
 /***
@@ -84,26 +66,26 @@ void send_buffer(void* push_socket, int task_id,
 
 
 long int
-bielec_integrals_index(const short int i, const short int j, const short int k, const short int l)
+bielec_integrals_index(const int i, const int j, const int k, const int l)
 {
 
-    const short int p = i < j ? (i + 1) : (j + 1);
-    const short int r = i < j ? (j + 1) : (i + 1);
-    const short int pp = p + ((r * r - r) >> 1);
+    const int p = i < j ? (i + 1) : (j + 1);
+    const int r = i < j ? (j + 1) : (i + 1);
+    const long int pp = p + ((r * r - r) / 2);
 
-    const short int q = k < l ? (k + 1) : (l + 1);
-    const short int s = k < l ? (l + 1) : (k + 1);
-    const short int qq = q + ((s * s - s) >> 1);
+    const int q = k < l ? (k + 1) : (l + 1);
+    const int s = k < l ? (l + 1) : (k + 1);
+    const long int qq = q + ((s * s - s) / 2);
 
-    const short int i1 = pp < qq ? pp : qq;
-    const short int i2 = pp < qq ? qq : pp;
-    return i1 + ((i2 * i2 - i2) >> 1);
+    const long int i1 = pp < qq ? pp : qq;
+    const long int i2 = pp < qq ? qq : pp;
+    return i1 + ((i2 * i2 - i2) / 2);
 }
 
 
 void send_buffer(void* push_socket, int task_id,
-    const short int n1, const short int n2, const short int n3, const short int n4,
-    const short int bf1_first, const short int bf2_first, const short int bf3_first, const short int bf4_first,
+    const int n1, const int n2, const int n3, const int n4,
+    const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234)
 {
     int n_integrals = 0;
@@ -119,13 +101,13 @@ void send_buffer(void* push_socket, int task_id,
     if (n1 != n2 && n1 != n3 && n1 != n4 && n2 != n3 && n2 != n4 && n3 != n4) {
 
         for (auto f1 = 0, f1234 = 0; f1 != n1; ++f1) {
-            const auto bf1 = f1 + bf1_first;
-            for (auto f2 = 0; f2 != n2; ++f2) {
-                const auto bf2 = f2 + bf2_first;
-                for (auto f3 = 0; f3 != n3; ++f3) {
-                    const auto bf3 = f3 + bf3_first;
-                    for (auto f4 = 0; f4 != n4; ++f4, ++f1234) {
-                        const auto bf4 = f4 + bf4_first;
+            const int bf1 = f1 + bf1_first;
+            for (int f2 = 0; f2 != n2; ++f2) {
+                const int bf2 = f2 + bf2_first;
+                for (int f3 = 0; f3 != n3; ++f3) {
+                    const int bf3 = f3 + bf3_first;
+                    for (int f4 = 0; f4 != n4; ++f4, ++f1234) {
+                        const int bf4 = f4 + bf4_first;
 
                         if (fabs(buf_1234[f1234]) > precision) {
                           buffer_i[n_integrals] = bielec_integrals_index(bf1, bf2, bf3, bf4);
@@ -142,23 +124,23 @@ void send_buffer(void* push_socket, int task_id,
         //Vector to store the uniq key of the quartet
         set<long int> uniq;
 
-        for (auto f1 = 0, f1234 = 0; f1 != n1; ++f1) {
-            const auto bf1 = f1 + bf1_first;
-            for (auto f2 = 0; f2 != n2; ++f2) {
-                const auto bf2 = f2 + bf2_first;
-                for (auto f3 = 0; f3 != n3; ++f3) {
-                    const auto bf3 = f3 + bf3_first;
-                    for (auto f4 = 0; f4 != n4; ++f4, ++f1234) {
-                        const auto bf4 = f4 + bf4_first;
-                        const auto key = bielec_integrals_index(bf1, bf2, bf3, bf4);
-
-                        //Check if the quartet have been already computed
-                        if ( (uniq.find(key) == uniq.end())
-                        && (fabs(buf_1234[f1234]) > precision)) {
-                            uniq.insert(key);
-                            buffer_i[n_integrals] = key;
-                            buffer_value[n_integrals] = buf_1234[f1234];
-                            n_integrals += 1;
+        for (int f1 = 0, f1234 = 0; f1 != n1; ++f1) {
+            const int bf1 = f1 + bf1_first;
+            for (int f2 = 0; f2 != n2; ++f2) {
+                const int bf2 = f2 + bf2_first;
+                for (int f3 = 0; f3 != n3; ++f3) {
+                    const int bf3 = f3 + bf3_first;
+                    for (int f4 = 0; f4 != n4; ++f4, ++f1234) {
+                        if (fabs(buf_1234[f1234]) > precision) {
+                            const int bf4 = f4 + bf4_first;
+                            const long int key = bielec_integrals_index(bf1, bf2, bf3, bf4);
+                            //Check if the quartet has been already computed
+                            if (uniq.find(key) == uniq.end()) {
+                              uniq.insert(key);
+                              buffer_i[n_integrals] = key;
+                              buffer_value[n_integrals] = buf_1234[f1234];
+                              n_integrals += 1;
+                            }
                         }
                     }
                 }
@@ -166,24 +148,27 @@ void send_buffer(void* push_socket, int task_id,
         }
     }
     int rc;
+printf("%d\n",n_integrals);
     rc = zmq_send(push_socket, &n_integrals, 4, ZMQ_SNDMORE);
     if (rc != 4) {
       perror("Error pushing n_integrals");
       exit(EXIT_FAILURE);
     }
 
-    int msg_len = n_integrals*sizeof(long int);
-    rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
-    if (rc != msg_len) {
-      perror("Error pushing buffer_i");
-      exit(EXIT_FAILURE);
-    }
+    if (n_integrals > 0) {
+      int msg_len = n_integrals*sizeof(long int);
+      rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
+      if (rc != msg_len) {
+        perror("Error pushing buffer_i");
+        exit(EXIT_FAILURE);
+      }
 
-    msg_len = n_integrals*sizeof(double);
-    rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
-    if (rc != msg_len) {
-      perror("Error pushing buffer_value");
-      exit(EXIT_FAILURE);
+      msg_len = n_integrals*sizeof(double);
+      rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
+      if (rc != msg_len) {
+        perror("Error pushing buffer_value");
+        exit(EXIT_FAILURE);
+      }
     }
 
     rc = zmq_send(push_socket, &task_id, 4, 0);
@@ -202,9 +187,9 @@ Matrix compute_schwartz_ints(const BasisSet& bs1,
     bool use_2norm)
 {
     const BasisSet& bs2 = (_bs2.empty() ? bs1 : _bs2);
-    const auto nsh1 = bs1.size();
-    const auto nsh2 = bs2.size();
-    const auto bs1_equiv_bs2 = (&bs1 == &bs2);
+    const size_t nsh1 = bs1.size();
+    const size_t nsh2 = bs2.size();
+    const bool bs1_equiv_bs2 = (&bs1 == &bs2);
 
     Matrix K = Matrix::Zero(nsh1, nsh2);
 
@@ -341,7 +326,6 @@ int main(int argc, char* argv[])
     const auto nshell = obs.size();
     const auto nao = obs.nbf();
     const auto unao = 0.25 * nao * (nao + 1) * (0.5 * nao * (nao + 1) + 1);
-    const size_t bytes = unao * sizeof(IntQuartet);
 
     libint2::init(); // do not use libint before this
 
@@ -451,7 +435,7 @@ int main(int argc, char* argv[])
           msg[rc] = '\0';
           int s1, s2, s3, s4;
           sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
-          if (task_id == 0) break;
+          if (!strcmp(reply,"terminate")) break;
           
           auto bf1_first = shell2bf[s1]; // first basis function in this shell
           auto n1 = obs[s1].size(); // number of basis functions in this shell
@@ -488,6 +472,11 @@ int main(int argc, char* argv[])
 
         }
 
+        send_buffer(push_socket, 0,
+                      0, 0, 0, 0,
+                      0, 0, 0, 0,
+                      NULL);
+
         sprintf(msg,"disconnect ao_integrals %d",worker_id);
         msg_len = strlen(msg);
         rc = zmq_send(qp_run_socket,msg,msg_len,0);
@@ -496,20 +485,23 @@ int main(int argc, char* argv[])
           exit(EXIT_FAILURE);
         }
         rc = zmq_recv(qp_run_socket,msg,510,0);
+        msg[rc] = '\0';
         sscanf(msg, "%s %s", reply, state);
         if (strcmp(reply,"disconnect_reply") || strcmp(state,"ao_integrals")) {
           perror(msg);
           exit(EXIT_FAILURE);
         }
         
+        int value = 0;
         rc = zmq_disconnect(push_socket,push_address);
-        rc = zmq_setsockopt(push_socket,ZMQ_LINGER,0,4);
+        rc = zmq_setsockopt(push_socket,ZMQ_LINGER,&value,4);
         rc = zmq_close(push_socket);
 
     }
 
+    int value = 0;
     rc = zmq_disconnect(qp_run_socket,qp_run_address.c_str());
-    rc = zmq_setsockopt(qp_run_socket,ZMQ_LINGER,0,4);
+    rc = zmq_setsockopt(qp_run_socket,ZMQ_LINGER,&value,4);
     rc = zmq_close(qp_run_socket);
 
     libint2::finalize(); // do not use libint after this
