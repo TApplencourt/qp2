@@ -1,5 +1,5 @@
 #include <libint2.hpp>
-
+#include <string>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/mman.h>
@@ -94,7 +94,7 @@ void save_buffer(IntQuartet* map,
  *               |                                            
  */
 
-IntQuartet* init_mmap(const string filename, const size_t bytes)
+IntQuartet* init_mmap(const char* filename, const size_t bytes)
 {
     /**
   1- Create the file descriptor
@@ -111,7 +111,7 @@ IntQuartet* init_mmap(const string filename, const size_t bytes)
   */
 
     // Create file descriptor (chmod 600 file – owner can read and write)
-    const int fd = open(filename.c_str(), O_RDWR | O_CREAT, (mode_t)0600);
+    const int fd = open(filename, O_RDWR | O_CREAT, (mode_t)0600);
     if (fd == -1) {
         printf("%s:\n", filename);
         perror("Error opening mmap file for writing only");
@@ -346,7 +346,7 @@ int main(int argc, char* argv[])
     int iarg = 0;
     //switch getopt error message
     opterr = 1;
-    while ((iarg = getopt_long(argc, argv, "hx:b:m:", long_options, &index)) != -1) {
+    while ((iarg = getopt_long(argc, argv, "hx:b:m:", long_options, NULL)) != -1) {
 
         switch (iarg) {
         case 'h':
@@ -376,7 +376,7 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
     struct stat buffer;
     if (stat(xyz_path.c_str(), &buffer) != 0) {
-        printf("%s:\n", xyz_path);
+        printf("%s:\n", xyz_path.c_str());
         perror("The xyz file do not exists");
         return 1;
     }
@@ -400,7 +400,7 @@ int main(int argc, char* argv[])
     /*** ============================ **/
     /*** mmap dirname                 **/
     /*** ============================ **/
-    IntQuartet* map = init_mmap(mmap_path, bytes); // do not use map before this
+    IntQuartet* map = init_mmap(mmap_path.c_str(), bytes); // do not use map before this
     libint2::init(); // do not use libint before this
 
     /*** ============================ **/
