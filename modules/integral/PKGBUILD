@@ -4,7 +4,7 @@ pkgname=libinit_int
 pkgver=0.1
 
 source=(integral_bielec.cc)
-depends=(libint)
+lib_depends=(libint)
 
 docs="USAGE: integral_bielec <xyz_path> <basis>
       <basis> are in g94 format.

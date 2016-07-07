@@ -5,17 +5,22 @@ safe() { # If the command fails, exit with code -1
 safe_depend() {
     msg "$(gettext "Checking dependencies...")"
 
-    if [ -n "${depends+x}" ]; then
-        safe check_depend
+    if [ -n "${bin_depends+x}" ]; then
+        safe check_depend bin
+    fi
+
+    if [ -n "${lib_depends+x}" ]; then
+        safe check_depend lib
     fi
 
     if [ -n "${python_depends+x}" ]; then
-        safe check_python
+        safe check_depend python
     fi
 
     if [ -n "${ocaml_depends+x}" ]; then
-        safe check_ocaml
-    fi    
+        safe check_depend ocaml
+    fi
+    msg "OK"
 }
 
 unsafe_source() {

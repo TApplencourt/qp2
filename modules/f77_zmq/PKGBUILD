@@ -6,7 +6,7 @@ pkgdesc="A Fortran 77 binding library for ZeroMQ"
 url="https://github.com/zeromq/f77_zmq"
 
 source=("https://github.com/zeromq/f77_zmq/archive/master.zip")
-depends=('zeromq')
+lib_depends=(libzmq)
 
 build() {
   cd "$srcdir/master"

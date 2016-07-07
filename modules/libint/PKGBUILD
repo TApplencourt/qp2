@@ -10,6 +10,8 @@ url="https://github.com/evaleev/libint"
 source=("https://github.com/evaleev/libint/releases/download/v${pkgver}/libint-${pkgver}-stable.tgz"
         "${eigname}-${eigver}.tar.bz2::http://bitbucket.org/eigen/eigen/get/${eigver}.tar.bz2")
 
+lib_depends=(libboost)
+
 build() {
     cd "$srcdir/libint-${pkgver}-stable"
     export CXX="g++"

@@ -1,19 +1,19 @@
 #!/bin/bash
 
-pkgname=zeromq
-pkgver=4.1.4
+pkgname=libzmq
+pkgver=4.1.5
 pkgdesc="Fast messaging system built on sockets.  C and C++ bindings.  aka 0MQ, ZMQ."
 url="http://www.zeromq.org"
 
-source=('https://github.com/zeromq/zeromq4-1/releases/download/v4.1.4/zeromq-4.1.4.tar.gz')
+source=("https://github.com/zeromq/zeromq4-1/releases/download/v$pkgver/zeromq-$pkgver.tar.gz")
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/zeromq-$pkgver"
   ./configure prefix=/usr --without-libsodium --enable-static
   make
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/zeromq-$pkgver"
   make DESTDIR="$pkgdir" install
 }

@@ -6,8 +6,6 @@ pkgdesc="Local Copy of the EMSL Basis Set Exchange site"
 url="https://github.com/jaimergp/ebsel"
 source=('https://github.com/jaimergp/ebsel/archive/master.zip')
 
-python_depends=('docopt')
-
 build() {
 	cd master
         python setup.py build
@@ -27,7 +25,7 @@ package() {
 		error "Error in PYTHONPATH"
 		exit 1
 	fi
-	export PYTHONPATH=$PDIR
+	export PYTHONPATH="${PYTHONPATH}":"${PDIR}"
 	mkdir -p $PDIR
-	python setup.py install --prefix=$pkgdir/usr/
+	python setup.py install --prefix=${pkgdir}/usr/
 }
