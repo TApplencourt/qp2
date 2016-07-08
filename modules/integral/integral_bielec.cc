@@ -50,7 +50,7 @@ long int bielec_integrals_index(const int i, const int j, const int k, const int
             n{1,4} the number of AO in (mn,rs) respectively
             bf{1,4}_first the index of the first basis function in thhis shell
 */
-void send_buffer(void* push_socket, int task_id,
+void send_buffer(void* collector_socket, int task_id,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234);
@@ -79,7 +79,7 @@ bielec_integrals_index(const int i, const int j, const int k, const int l)
     return i1 + ((i2 * i2 - i2) / 2);
 }
 
-void send_buffer(void* push_socket, int task_id,
+void send_buffer(void* collector_socket, int task_id,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234)
@@ -145,7 +145,7 @@ void send_buffer(void* push_socket, int task_id,
     }
     int rc;
     printf("%d\n", n_integrals);
-    rc = zmq_send(push_socket, &n_integrals, 4, ZMQ_SNDMORE);
+    rc = zmq_send(collector_socket, &n_integrals, 4, ZMQ_SNDMORE);
     if (rc != 4) {
         perror("Error pushing n_integrals");
         exit(EXIT_FAILURE);
@@ -153,21 +153,21 @@ void send_buffer(void* push_socket, int task_id,
 
     if (n_integrals > 0) {
         int msg_len = n_integrals * sizeof(long int);
-        rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
+        rc = zmq_send(collector_socket, buffer_i, msg_len, ZMQ_SNDMORE);
         if (rc != msg_len) {
             perror("Error pushing buffer_i");
             exit(EXIT_FAILURE);
         }
 
         msg_len = n_integrals * sizeof(double);
-        rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
+        rc = zmq_send(collector_socket, buffer_value, msg_len, ZMQ_SNDMORE);
         if (rc != msg_len) {
             perror("Error pushing buffer_value");
             exit(EXIT_FAILURE);
         }
     }
 
-    rc = zmq_send(push_socket, &task_id, 4, 0);
+    rc = zmq_send(collector_socket, &task_id, 4, 0);
     if (rc != 4) {
         perror("Error pushing task_id");
         exit(EXIT_FAILURE);
@@ -227,7 +227,7 @@ void print_usage()
 {
     printf("INTREGRAL_BIELECT : Compute the bielectronique integral.\n");
     printf("   For each possible permutation of i,j,k,l giving the same integral,\n");
-    printf("   only one arbitrary version is stored in the memory map\n");
+    printf("   only one arbitrary version is computed (this is a task)\n");
 
     printf("\nUSAGE\n");
     printf("  integral_bielect [OPTION]\n");
@@ -236,11 +236,16 @@ void print_usage()
     printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
     printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
     printf("    -a, --address <name> : The address of the task server\n");
+    printf("    -t  --task           : Create the Task\n");
 
     printf("\nNOTA BENE\n");
     printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
     printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
     printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
+
+
+
+
 }
 
 int main(int argc, char* argv[])
@@ -264,7 +269,7 @@ int main(int argc, char* argv[])
 
     string xyz_path;
     string basis_name;
-    string qp_run_address;
+    string task_scheduler_address;
     int do_task = 0;
 
     int iarg = 0;
@@ -279,7 +284,7 @@ int main(int argc, char* argv[])
             do_task = 1;
             break;
         case 'a':
-            qp_run_address = optarg;
+            task_scheduler_address = optarg;
             break;
         case 'x':
             xyz_path = optarg;
@@ -293,7 +298,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (xyz_path.empty() || basis_name.empty() || qp_run_address.empty()) {
+    if (xyz_path.empty() || basis_name.empty() || task_scheduler_address.empty()) {
         print_usage();
         return 1;
     }
@@ -340,7 +345,7 @@ int main(int argc, char* argv[])
     int rc;
     void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
     void* qp_run_socket = zmq_socket(context, ZMQ_REQ);
-    rc = zmq_connect(qp_run_socket, qp_run_address.c_str());
+    rc = zmq_connect(qp_run_socket, task_scheduler_address.c_str());
     if (rc != 0) {
         perror("Error connecting the socket");
         exit(EXIT_FAILURE);
@@ -360,6 +365,7 @@ int main(int argc, char* argv[])
                     for (auto s4 = 0; s4 <= s4_max; ++s4) {
                         if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
                             continue;
+
                         sprintf(msg, "add_task ao_integrals %6d %6d %6d %6d", s1, s2, s3, s4);
                         rc = zmq_send(qp_run_socket, msg, 50, 0);
                         if (rc != 50) {
@@ -396,9 +402,9 @@ int main(int argc, char* argv[])
 
         rc = zmq_recv(qp_run_socket, msg, 510, 0);
         msg[rc] = '\0';
-        char reply[32], state[32], push_address[128];
+        char reply[32], state[32], collector_address[128];
         int worker_id;
-        sscanf(msg, "%s %s %d %s", reply, state, &worker_id, push_address);
+        sscanf(msg, "%s %s %d %s", reply, state, &worker_id, collector_addressok);
         if (strcmp(reply, "connect_reply")) {
             perror("Bad reply");
             exit(EXIT_FAILURE);
@@ -408,8 +414,8 @@ int main(int argc, char* argv[])
             exit(EXIT_FAILURE);
         }
 
-        void* push_socket = zmq_socket(context, ZMQ_PUSH);
-        rc = zmq_connect(push_socket, push_address);
+        void* collector_socket = zmq_socket(context, ZMQ_PUSH);
+        rc = zmq_connect(collector_socket, collector_address);
         if (rc != 0) {
             perror("Error connecting the push socket");
             exit(EXIT_FAILURE);
@@ -457,13 +463,13 @@ int main(int argc, char* argv[])
                 exit(EXIT_FAILURE);
             }
 
-            send_buffer(push_socket, task_id,
+            send_buffer(collector_socket, task_id,
                 n1, n2, n3, n4,
                 bf1_first, bf2_first, bf3_first, bf4_first,
                 buf_1234);
         }
 
-        send_buffer(push_socket, 0,
+        send_buffer(collector_socket, 0,
             0, 0, 0, 0,
             0, 0, 0, 0,
             NULL);
@@ -484,13 +490,13 @@ int main(int argc, char* argv[])
         }
 
         int value = 0;
-        rc = zmq_disconnect(push_socket, push_address);
-        rc = zmq_setsockopt(push_socket, ZMQ_LINGER, &value, 4);
-        rc = zmq_close(push_socket);
+        rc = zmq_disconnect(collector_socket, collector_address);
+        rc = zmq_setsockopt(collector_socket, ZMQ_LINGER, &value, 4);
+        rc = zmq_close(collector_socket);
     }
 
     int value = 0;
-    rc = zmq_disconnect(qp_run_socket, qp_run_address.c_str());
+    rc = zmq_disconnect(qp_run_socket, task_scheduler_address.c_str());
     rc = zmq_setsockopt(qp_run_socket, ZMQ_LINGER, &value, 4);
     rc = zmq_close(qp_run_socket);
 
