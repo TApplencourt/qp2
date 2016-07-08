@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <getopt.h>
 #include <sys/stat.h>
+#include <math.h>
 
 using namespace std;
 
@@ -26,8 +27,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
 using libint2::Atom;
 using libint2::BasisSet;
 
-//const double precision = 1e-15;
-const double precision = -1e-15;
+const double precision = 1e-15;
 
 Matrix compute_schwartz_ints(const BasisSet& bs1,
     const BasisSet& bs2 = BasisSet(),
@@ -50,7 +50,7 @@ long int bielec_integrals_index(const int i, const int j, const int k, const int
             n{1,4} the number of AO in (mn,rs) respectively
             bf{1,4}_first the index of the first basis function in thhis shell
 */
-void send_buffer(void* push_socket, int task_id,
+void send_buffer(void* push_socket, const int task_id, const vector<double> &renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234);
@@ -66,26 +66,26 @@ long int
 bielec_integrals_index(const int i, const int j, const int k, const int l)
 {
 
-    const int p = i < j ? (i + 1) : (j + 1);
-    const int r = i < j ? (j + 1) : (i + 1);
-    const long int pp = p + ((r * r - r) / 2);
+    const long int p = i < k ? (i + 1) : (k + 1);
+    const long int r = i < k ? (k + 1) : (i + 1);
+    const long int pp = p + ((r * r - r) >> 1);
 
-    const int q = k < l ? (k + 1) : (l + 1);
-    const int s = k < l ? (l + 1) : (k + 1);
-    const long int qq = q + ((s * s - s) / 2);
+    const long int q = j < l ? (j + 1) : (l + 1);
+    const long int s = j < l ? (l + 1) : (j + 1);
+    const long int qq = q + ((s * s - s) >> 1);
 
     const long int i1 = pp < qq ? pp : qq;
     const long int i2 = pp < qq ? qq : pp;
-    return i1 + ((i2 * i2 - i2) / 2);
+    return i1 + ((i2 * i2 - i2) >> 1);
 }
 
-void send_buffer(void* push_socket, int task_id,
+void send_buffer(void* push_socket, const int task_id, const vector<double> &renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234)
 {
     int n_integrals = 0;
-    const size_t n_integrals_max = n1 * n2 * n3 * n4;
+    const int n_integrals_max = n1 * n2 * n3 * n4;
     long int* buffer_i = (long int*)malloc(n_integrals_max * sizeof(long int));
     double* buffer_value = (double*)malloc(n_integrals_max * sizeof(double));
     /**
@@ -96,18 +96,23 @@ void send_buffer(void* push_socket, int task_id,
           */
     if (n1 != n2 && n1 != n3 && n1 != n4 && n2 != n3 && n2 != n4 && n3 != n4) {
 
-        for (auto f1 = 0, f1234 = 0; f1 != n1; ++f1) {
+        for (auto f1 = 0, f1234 = 0; f1 < n1; ++f1) {
             const int bf1 = f1 + bf1_first;
-            for (int f2 = 0; f2 != n2; ++f2) {
+            const double fn1 = renorm[bf1];
+            for (int f2 = 0; f2 < n2; ++f2) {
                 const int bf2 = f2 + bf2_first;
-                for (int f3 = 0; f3 != n3; ++f3) {
+                const double fn2 = renorm[bf2] * fn1;
+                for (int f3 = 0; f3 < n3; ++f3) {
                     const int bf3 = f3 + bf3_first;
-                    for (int f4 = 0; f4 != n4; ++f4, ++f1234) {
+                    const double fn3 = renorm[bf3] * fn2;
+                    for (int f4 = 0; f4 < n4; ++f4, ++f1234) {
                         const int bf4 = f4 + bf4_first;
+                        const double fn4 = renorm[bf4] * fn3;
 
                         if (fabs(buf_1234[f1234]) > precision) {
-                            buffer_i[n_integrals] = bielec_integrals_index(bf1, bf2, bf3, bf4);
-                            buffer_value[n_integrals] = buf_1234[f1234];
+                            const long int key = bielec_integrals_index(bf1, bf3, bf2, bf4);
+                            buffer_i[n_integrals] = key;
+                            buffer_value[n_integrals] = buf_1234[f1234] * fn4;
                             n_integrals += 1;
                         }
                     }
@@ -120,54 +125,58 @@ void send_buffer(void* push_socket, int task_id,
         //Vector to store the uniq key of the quartet
         set<long int> uniq;
 
-        for (int f1 = 0, f1234 = 0; f1 != n1; ++f1) {
+        for (int f1 = 0, f1234 = 0; f1 < n1; ++f1) {
             const int bf1 = f1 + bf1_first;
-            for (int f2 = 0; f2 != n2; ++f2) {
+            const double fn1 = renorm[bf1];
+            for (int f2 = 0; f2 < n2; ++f2) {
                 const int bf2 = f2 + bf2_first;
-                for (int f3 = 0; f3 != n3; ++f3) {
+                 const double fn2 = renorm[bf2] * fn1;
+                for (int f3 = 0; f3 < n3; ++f3) {
                     const int bf3 = f3 + bf3_first;
-                    for (int f4 = 0; f4 != n4; ++f4, ++f1234) {
+                    const double fn3 = renorm[bf3] * fn2;
+                    for (int f4 = 0; f4 < n4; ++f4, ++f1234) {
                         if (fabs(buf_1234[f1234]) > precision) {
                             const int bf4 = f4 + bf4_first;
-                            const long int key = bielec_integrals_index(bf1, bf2, bf3, bf4);
+                            const double fn4 = renorm[bf4] * fn3;
+
+                            const long int key = bielec_integrals_index(bf1, bf3, bf2, bf4);
                             //Check if the quartet has been already computed
                             if (uniq.find(key) == uniq.end()) {
                                 uniq.insert(key);
                                 buffer_i[n_integrals] = key;
-                                buffer_value[n_integrals] = buf_1234[f1234];
+                                buffer_value[n_integrals] = buf_1234[f1234] * fn4;
                                 n_integrals += 1;
                             }
-                        }
+                          }
                     }
                 }
             }
         }
     }
     int rc;
-    printf("%d\n", n_integrals);
-    rc = zmq_send(push_socket, &n_integrals, 4, ZMQ_SNDMORE);
+    size_t msg_len = 4;
+    rc = zmq_send(push_socket, &n_integrals, msg_len, ZMQ_SNDMORE);
     if (rc != 4) {
         perror("Error pushing n_integrals");
         exit(EXIT_FAILURE);
     }
 
-    if (n_integrals > 0) {
-        int msg_len = n_integrals * sizeof(long int);
-        rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
-        if (rc != msg_len) {
-            perror("Error pushing buffer_i");
-            exit(EXIT_FAILURE);
-        }
-
-        msg_len = n_integrals * sizeof(double);
-        rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
-        if (rc != msg_len) {
-            perror("Error pushing buffer_value");
-            exit(EXIT_FAILURE);
-        }
+    msg_len = n_integrals * sizeof(long int);
+    rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
+    if (rc != msg_len) {
+        perror("Error pushing buffer_i");
+        exit(EXIT_FAILURE);
     }
 
-    rc = zmq_send(push_socket, &task_id, 4, 0);
+    msg_len = n_integrals * sizeof(double);
+    rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
+    if (rc != msg_len) {
+        perror("Error pushing buffer_value");
+        exit(EXIT_FAILURE);
+    }
+
+    msg_len = 4;
+    rc = zmq_send(push_socket, &task_id, msg_len, 0);
     if (rc != 4) {
         perror("Error pushing task_id");
         exit(EXIT_FAILURE);
@@ -194,7 +203,7 @@ Matrix compute_schwartz_ints(const BasisSet& bs1,
     engines.set_precision(0.); // !!! very important: cannot screen primitives in Schwartz computation !!!
 
     // loop over permutationally-unique set of shells
-    for (auto s1 = 0l, s12 = 0l; s1 != nsh1; ++s1) {
+    for (auto s1 = 0l, s12 = 0l; s1 < nsh1; ++s1) {
 
         auto n1 = bs1[s1].size(); // number of basis functions in this shell
 
@@ -316,14 +325,16 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
     // export LIBINT_DATA_PATH="$qp_root"/usr/share/libint/2.1.0-beta/basis/
 
+    libint2::Shell::do_enforce_unit_normalization(false);
     BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
-    const auto nshell = obs.size();
-    const auto nao = obs.nbf();
-    const auto unao = 0.25 * nao * (nao + 1) * (0.5 * nao * (nao + 1) + 1);
+    const size_t nshell = obs.size();
+    const size_t nao = obs.nbf();
+    const size_t unao = 0.25 * nao * (nao + 1) * (0.5 * nao * (nao + 1) + 1);
 
     libint2::init(); // do not use libint before this
+
 
     /*** ============================ **/
     /*** Compute schwartz             **/
@@ -347,13 +358,13 @@ int main(int argc, char* argv[])
     }
 
     char msg[512];
-    int msg_len;
+    size_t msg_len;
 
     if (do_task) {
         /*TODO
         * compute MN shell pair for better load balancing
         */
-        for (auto s1 = 0l, s1234 = 0l; s1 != nshell; ++s1) {
+        for (auto s1 = 0l, s1234 = 0l; s1 < nshell; ++s1) {
             for (auto s2 = 0; s2 <= s1; ++s2) {
                 for (auto s3 = 0; s3 <= s1; ++s3) {
                     const auto s4_max = (s1 == s3) ? s2 : s3;
@@ -361,12 +372,12 @@ int main(int argc, char* argv[])
                         if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
                             continue;
                         sprintf(msg, "add_task ao_integrals %6d %6d %6d %6d", s1, s2, s3, s4);
-                        rc = zmq_send(qp_run_socket, msg, 50, 0);
+                        rc = zmq_send(qp_run_socket, msg, (size_t) 50, 0);
                         if (rc != 50) {
                             perror("Error sending the task");
                             exit(EXIT_FAILURE);
                         }
-                        rc = zmq_recv(qp_run_socket, msg, 510, 0);
+                        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
                         if (rc != 2) {
                             perror(msg);
                             exit(EXIT_FAILURE);
@@ -388,13 +399,31 @@ int main(int argc, char* argv[])
         // shell2bf[1] = index of the first basis function in shell 1
         // ...
 
-        rc = zmq_send(qp_run_socket, "connect tcp", 11, 0);
+        libint2::OneBodyEngine onebody_engine(libint2::OneBodyEngine::overlap, // will compute overlap ints
+                                              obs.max_nprim(), // max # of primitives in shells this engine will accept
+                                              obs.max_l()      // max angular momentum of shells this engine will accept
+                                            );
+
+        /* Compute renormalization factors for AOs due to <xy|xy> != <xx|xx> */
+        vector <double> renorm(nao);
+        for(int s1=0; s1<nshell; s1++) {
+          const auto* ints_shellset = onebody_engine.compute(obs[s1], obs[s1]);
+          const int n1=obs[s1].size();
+          const int bf1_first = shell2bf[s1];
+          for (int bf1=0 ; bf1 < n1 ; bf1++) {
+            const int ao_idx = bf1_first + bf1;
+            const int diag_idx = bf1*n1 + bf1;
+            renorm[ao_idx] = sqrt(ints_shellset[0]/ints_shellset[diag_idx]);
+          }
+        }
+
+        rc = zmq_send(qp_run_socket, "connect tcp", (size_t) 11, 0);
         if (rc != 11) {
             perror("Error connecting to the task server");
             exit(EXIT_FAILURE);
         }
 
-        rc = zmq_recv(qp_run_socket, msg, 510, 0);
+        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
         msg[rc] = '\0';
         char reply[32], state[32], push_address[128];
         int worker_id;
@@ -418,12 +447,12 @@ int main(int argc, char* argv[])
         int task_id;
         while (1) {
             sprintf(msg, "get_task ao_integrals %8d", worker_id);
-            rc = zmq_send(qp_run_socket, msg, 30, 0);
+            rc = zmq_send(qp_run_socket, msg, (size_t) 30, 0);
             if (rc != 30) {
                 perror("Error connecting the push socket");
                 exit(EXIT_FAILURE);
             }
-            rc = zmq_recv(qp_run_socket, msg, 510, 0);
+            rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
             msg[rc] = '\0';
             int s1, s2, s3, s4;
             sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
@@ -451,22 +480,19 @@ int main(int argc, char* argv[])
                 perror("Error sending task_done");
                 exit(EXIT_FAILURE);
             }
-            rc = zmq_recv(qp_run_socket, msg, 510, 0);
+            rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
             if (rc != 2) {
                 perror(msg);
                 exit(EXIT_FAILURE);
             }
 
-            send_buffer(push_socket, task_id,
+            send_buffer(push_socket, task_id, renorm,
                 n1, n2, n3, n4,
                 bf1_first, bf2_first, bf3_first, bf4_first,
                 buf_1234);
         }
 
-        send_buffer(push_socket, 0,
-            0, 0, 0, 0,
-            0, 0, 0, 0,
-            NULL);
+
 
         sprintf(msg, "disconnect ao_integrals %d", worker_id);
         msg_len = strlen(msg);
@@ -475,7 +501,7 @@ int main(int argc, char* argv[])
             perror("Error sending disconnect");
             exit(EXIT_FAILURE);
         }
-        rc = zmq_recv(qp_run_socket, msg, 510, 0);
+        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
         msg[rc] = '\0';
         sscanf(msg, "%s %s", reply, state);
         if (strcmp(reply, "disconnect_reply") || strcmp(state, "ao_integrals")) {
