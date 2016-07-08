@@ -34,7 +34,6 @@ Matrix compute_schwartz_ints(const BasisSet& bs1,
     bool use_2norm = false // use infty norm by default
     );
 
-
 /**
     For a (ij|kl) integral quarter (starting with 0) return a unique id.
 
@@ -42,7 +41,6 @@ Matrix compute_schwartz_ints(const BasisSet& bs1,
     @return A uniq key
 */
 long int bielec_integrals_index(const int i, const int j, const int k, const int l);
-
 
 /**
     For a (mn|rs) shell integrals stored in a buffer
@@ -64,7 +62,6 @@ void send_buffer(void* push_socket, int task_id,
  *               |                                            
  */
 
-
 long int
 bielec_integrals_index(const int i, const int j, const int k, const int l)
 {
@@ -82,16 +79,15 @@ bielec_integrals_index(const int i, const int j, const int k, const int l)
     return i1 + ((i2 * i2 - i2) / 2);
 }
 
-
 void send_buffer(void* push_socket, int task_id,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234)
 {
     int n_integrals = 0;
-    const size_t n_integrals_max = n1*n2*n3*n4;
-    long int *buffer_i = (long int*) malloc (n_integrals_max*sizeof(long int));
-    double *buffer_value = (double*) malloc (n_integrals_max*sizeof(double));
+    const size_t n_integrals_max = n1 * n2 * n3 * n4;
+    long int* buffer_i = (long int*)malloc(n_integrals_max * sizeof(long int));
+    double* buffer_value = (double*)malloc(n_integrals_max * sizeof(double));
     /**
           loop over all the basis function in the buffer
           If all the shell in the quartet are different,
@@ -110,9 +106,9 @@ void send_buffer(void* push_socket, int task_id,
                         const int bf4 = f4 + bf4_first;
 
                         if (fabs(buf_1234[f1234]) > precision) {
-                          buffer_i[n_integrals] = bielec_integrals_index(bf1, bf2, bf3, bf4);
-                          buffer_value[n_integrals] = buf_1234[f1234];
-                          n_integrals += 1;
+                            buffer_i[n_integrals] = bielec_integrals_index(bf1, bf2, bf3, bf4);
+                            buffer_value[n_integrals] = buf_1234[f1234];
+                            n_integrals += 1;
                         }
                     }
                 }
@@ -136,10 +132,10 @@ void send_buffer(void* push_socket, int task_id,
                             const long int key = bielec_integrals_index(bf1, bf2, bf3, bf4);
                             //Check if the quartet has been already computed
                             if (uniq.find(key) == uniq.end()) {
-                              uniq.insert(key);
-                              buffer_i[n_integrals] = key;
-                              buffer_value[n_integrals] = buf_1234[f1234];
-                              n_integrals += 1;
+                                uniq.insert(key);
+                                buffer_i[n_integrals] = key;
+                                buffer_value[n_integrals] = buf_1234[f1234];
+                                n_integrals += 1;
                             }
                         }
                     }
@@ -148,33 +144,33 @@ void send_buffer(void* push_socket, int task_id,
         }
     }
     int rc;
-printf("%d\n",n_integrals);
+    printf("%d\n", n_integrals);
     rc = zmq_send(push_socket, &n_integrals, 4, ZMQ_SNDMORE);
     if (rc != 4) {
-      perror("Error pushing n_integrals");
-      exit(EXIT_FAILURE);
+        perror("Error pushing n_integrals");
+        exit(EXIT_FAILURE);
     }
 
     if (n_integrals > 0) {
-      int msg_len = n_integrals*sizeof(long int);
-      rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
-      if (rc != msg_len) {
-        perror("Error pushing buffer_i");
-        exit(EXIT_FAILURE);
-      }
+        int msg_len = n_integrals * sizeof(long int);
+        rc = zmq_send(push_socket, buffer_i, msg_len, ZMQ_SNDMORE);
+        if (rc != msg_len) {
+            perror("Error pushing buffer_i");
+            exit(EXIT_FAILURE);
+        }
 
-      msg_len = n_integrals*sizeof(double);
-      rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
-      if (rc != msg_len) {
-        perror("Error pushing buffer_value");
-        exit(EXIT_FAILURE);
-      }
+        msg_len = n_integrals * sizeof(double);
+        rc = zmq_send(push_socket, buffer_value, msg_len, ZMQ_SNDMORE);
+        if (rc != msg_len) {
+            perror("Error pushing buffer_value");
+            exit(EXIT_FAILURE);
+        }
     }
 
     rc = zmq_send(push_socket, &task_id, 4, 0);
     if (rc != 4) {
-      perror("Error pushing task_id");
-      exit(EXIT_FAILURE);
+        perror("Error pushing task_id");
+        exit(EXIT_FAILURE);
     }
 
     free(buffer_i);
@@ -329,7 +325,6 @@ int main(int argc, char* argv[])
 
     libint2::init(); // do not use libint before this
 
-
     /*** ============================ **/
     /*** Compute schwartz             **/
     /*** ============================ **/
@@ -337,21 +332,19 @@ int main(int argc, char* argv[])
     // WARNING: NOT SUR IF THIS WORK
     // We do not compute the matrix of norms of shell blocks
     const auto Schwartz = compute_schwartz_ints(obs);
-    
 
     /*** ======= **/
     /*** ZeroMQ  **/
     /*** ======= **/
 
     int rc;
-    void *context = zmq_ctx_new ();  // Do not use ZeroMQ before this
-    void *qp_run_socket = zmq_socket (context, ZMQ_REQ);
-    rc = zmq_connect(qp_run_socket,qp_run_address.c_str());
+    void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
+    void* qp_run_socket = zmq_socket(context, ZMQ_REQ);
+    rc = zmq_connect(qp_run_socket, qp_run_address.c_str());
     if (rc != 0) {
-      perror("Error connecting the socket");
-      exit(EXIT_FAILURE);
+        perror("Error connecting the socket");
+        exit(EXIT_FAILURE);
     }
-    
 
     char msg[512];
     int msg_len;
@@ -367,24 +360,24 @@ int main(int argc, char* argv[])
                     for (auto s4 = 0; s4 <= s4_max; ++s4) {
                         if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
                             continue;
-                        sprintf(msg,"add_task ao_integrals %6d %6d %6d %6d",s1,s2,s3,s4);
+                        sprintf(msg, "add_task ao_integrals %6d %6d %6d %6d", s1, s2, s3, s4);
                         rc = zmq_send(qp_run_socket, msg, 50, 0);
                         if (rc != 50) {
-                          perror("Error sending the task");
-                          exit(EXIT_FAILURE);
+                            perror("Error sending the task");
+                            exit(EXIT_FAILURE);
                         }
                         rc = zmq_recv(qp_run_socket, msg, 510, 0);
                         if (rc != 2) {
-                          perror(msg);
-                          exit(EXIT_FAILURE);
+                            perror(msg);
+                            exit(EXIT_FAILURE);
                         }
                     }
                 }
             }
         }
-    } else {
+    }
+    else {
 
-    
         libint2::TwoBodyEngine<libint2::Coulomb> coulomb_engine(obs.max_nprim(), obs.max_l(), 0);
 
         coulomb_engine.set_precision(std::min(precision, std::numeric_limits<double>::epsilon())); // shellset-dependent precision control will likely break positive definiteness
@@ -395,116 +388,112 @@ int main(int argc, char* argv[])
         // shell2bf[1] = index of the first basis function in shell 1
         // ...
 
-       
-       rc = zmq_send(qp_run_socket, "connect tcp", 11, 0);
-       if (rc != 11) {
-         perror("Error connecting to the task server");
-         exit(EXIT_FAILURE);
-       }
+        rc = zmq_send(qp_run_socket, "connect tcp", 11, 0);
+        if (rc != 11) {
+            perror("Error connecting to the task server");
+            exit(EXIT_FAILURE);
+        }
 
-       rc = zmq_recv(qp_run_socket, msg, 510, 0);
-       msg[rc] = '\0';
-       char reply[32], state[32], push_address[128];
-       int worker_id;
-       sscanf(msg, "%s %s %d %s", reply, state, &worker_id, push_address);
-       if (strcmp(reply,"connect_reply")) {
-         perror("Bad reply");
-         exit(EXIT_FAILURE);
-       }
-       if (strcmp(state,"ao_integrals")) {
-         perror("Bad state");
-         exit(EXIT_FAILURE);
-       }
+        rc = zmq_recv(qp_run_socket, msg, 510, 0);
+        msg[rc] = '\0';
+        char reply[32], state[32], push_address[128];
+        int worker_id;
+        sscanf(msg, "%s %s %d %s", reply, state, &worker_id, push_address);
+        if (strcmp(reply, "connect_reply")) {
+            perror("Bad reply");
+            exit(EXIT_FAILURE);
+        }
+        if (strcmp(state, "ao_integrals")) {
+            perror("Bad state");
+            exit(EXIT_FAILURE);
+        }
 
-       void *push_socket = zmq_socket (context, ZMQ_PUSH);
-       rc = zmq_connect(push_socket,push_address);
-       if (rc != 0) {
-         perror("Error connecting the push socket");
-         exit(EXIT_FAILURE);
-       }
-
-       int task_id;
-       while (1) {
-          sprintf(msg,"get_task ao_integrals %8d",worker_id);
-          rc = zmq_send(qp_run_socket,msg,30,0);
-          if (rc != 30) {
+        void* push_socket = zmq_socket(context, ZMQ_PUSH);
+        rc = zmq_connect(push_socket, push_address);
+        if (rc != 0) {
             perror("Error connecting the push socket");
             exit(EXIT_FAILURE);
-          }
-          rc = zmq_recv(qp_run_socket,msg,510,0);
-          msg[rc] = '\0';
-          int s1, s2, s3, s4;
-          sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
-          if (!strcmp(reply,"terminate")) break;
-          
-          auto bf1_first = shell2bf[s1]; // first basis function in this shell
-          auto n1 = obs[s1].size(); // number of basis functions in this shell
+        }
 
-          auto bf2_first = shell2bf[s2];
-          auto n2 = obs[s2].size();
+        int task_id;
+        while (1) {
+            sprintf(msg, "get_task ao_integrals %8d", worker_id);
+            rc = zmq_send(qp_run_socket, msg, 30, 0);
+            if (rc != 30) {
+                perror("Error connecting the push socket");
+                exit(EXIT_FAILURE);
+            }
+            rc = zmq_recv(qp_run_socket, msg, 510, 0);
+            msg[rc] = '\0';
+            int s1, s2, s3, s4;
+            sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
+            if (!strcmp(reply, "terminate"))
+                break;
 
-          auto bf3_first = shell2bf[s3];
-          auto n3 = obs[s3].size();
+            const auto bf1_first = shell2bf[s1]; // first basis function in this shell
+            const auto n1 = obs[s1].size(); // number of basis functions in this shell
 
-          auto bf4_first = shell2bf[s4];
-          auto n4 = obs[s4].size();
+            const auto bf2_first = shell2bf[s2];
+            const auto n2 = obs[s2].size();
 
-          const auto* buf_1234 = coulomb_engine.compute(obs[s1], obs[s2], obs[s3], obs[s4]);
+            const auto bf3_first = shell2bf[s3];
+            const auto n3 = obs[s3].size();
 
-          sprintf(msg,"task_done ao_integrals %d %d",worker_id,task_id);
-          msg_len = strlen(msg);
-          rc = zmq_send(qp_run_socket,msg,msg_len,0);
-          if (rc != msg_len) {
-            perror("Error sending task_done");
-            exit(EXIT_FAILURE);
-          }
-          rc = zmq_recv(qp_run_socket,msg,510,0);
-          if (rc != 2) {
-            perror(msg);
-            exit(EXIT_FAILURE);
-          }
+            const auto bf4_first = shell2bf[s4];
+            const auto n4 = obs[s4].size();
 
-          send_buffer(push_socket, task_id,
-                      n1, n2, n3, n4,
-                      bf1_first, bf2_first, bf3_first, bf4_first,
-                      buf_1234);
+            const auto* buf_1234 = coulomb_engine.compute(obs[s1], obs[s2], obs[s3], obs[s4]);
 
+            sprintf(msg, "task_done ao_integrals %d %d", worker_id, task_id);
+            msg_len = strlen(msg);
+            rc = zmq_send(qp_run_socket, msg, msg_len, 0);
+            if (rc != msg_len) {
+                perror("Error sending task_done");
+                exit(EXIT_FAILURE);
+            }
+            rc = zmq_recv(qp_run_socket, msg, 510, 0);
+            if (rc != 2) {
+                perror(msg);
+                exit(EXIT_FAILURE);
+            }
 
+            send_buffer(push_socket, task_id,
+                n1, n2, n3, n4,
+                bf1_first, bf2_first, bf3_first, bf4_first,
+                buf_1234);
         }
 
         send_buffer(push_socket, 0,
-                      0, 0, 0, 0,
-                      0, 0, 0, 0,
-                      NULL);
+            0, 0, 0, 0,
+            0, 0, 0, 0,
+            NULL);
 
-        sprintf(msg,"disconnect ao_integrals %d",worker_id);
+        sprintf(msg, "disconnect ao_integrals %d", worker_id);
         msg_len = strlen(msg);
-        rc = zmq_send(qp_run_socket,msg,msg_len,0);
+        rc = zmq_send(qp_run_socket, msg, msg_len, 0);
         if (rc != msg_len) {
-          perror("Error sending disconnect");
-          exit(EXIT_FAILURE);
+            perror("Error sending disconnect");
+            exit(EXIT_FAILURE);
         }
-        rc = zmq_recv(qp_run_socket,msg,510,0);
+        rc = zmq_recv(qp_run_socket, msg, 510, 0);
         msg[rc] = '\0';
         sscanf(msg, "%s %s", reply, state);
-        if (strcmp(reply,"disconnect_reply") || strcmp(state,"ao_integrals")) {
-          perror(msg);
-          exit(EXIT_FAILURE);
+        if (strcmp(reply, "disconnect_reply") || strcmp(state, "ao_integrals")) {
+            perror(msg);
+            exit(EXIT_FAILURE);
         }
-        
-        int value = 0;
-        rc = zmq_disconnect(push_socket,push_address);
-        rc = zmq_setsockopt(push_socket,ZMQ_LINGER,&value,4);
-        rc = zmq_close(push_socket);
 
+        int value = 0;
+        rc = zmq_disconnect(push_socket, push_address);
+        rc = zmq_setsockopt(push_socket, ZMQ_LINGER, &value, 4);
+        rc = zmq_close(push_socket);
     }
 
     int value = 0;
-    rc = zmq_disconnect(qp_run_socket,qp_run_address.c_str());
-    rc = zmq_setsockopt(qp_run_socket,ZMQ_LINGER,&value,4);
+    rc = zmq_disconnect(qp_run_socket, qp_run_address.c_str());
+    rc = zmq_setsockopt(qp_run_socket, ZMQ_LINGER, &value, 4);
     rc = zmq_close(qp_run_socket);
 
     libint2::finalize(); // do not use libint after this
     return 0;
 }
-
