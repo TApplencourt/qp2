@@ -8,14 +8,14 @@ check_one_depend(){
       ;;
 
     lib)
-        INPUT=$(tempfile -s .c)
+        tempfile=$(mktemp --suffix=.c)
         if ! $(command -v gcc >/dev/null 2>&1); then
             error "$(gettext "Please install gcc")"
             exit 1
         fi
-        gcc -l${depend/#lib/} ${INPUT} -o /dev/null &>/dev/null
+        gcc -l${depend/#lib/} ${tempfile} -o /dev/null &>/dev/null
         exit_code=$?
-        rm -- ${INPUT}
+        rm -- ${tempfile}
         ;;
     ocaml)
         if ! $(command -v opam >/dev/null 2>&1); then
@@ -79,9 +79,11 @@ check_depend() {
     if [ ${#diff[@]} -ne 0 ]; then
 
         not_present=()
+
+        warning "$(gettext "%s are not in the db ")" "${diff[@]}"
+        msg2 "$(gettext "Check if it is already installed in the system..." )"
+
         for depend in "${diff[@]}"; do
-            warning "$(gettext "%s is not in the db ")" "$depend"
-            msg2 "$(gettext "Check if it is already installed in the system" )"
             if $(check_one_depend $TYPE $depend); then
                 alexandria add external $depend external
             else
@@ -90,8 +92,10 @@ check_depend() {
         done
 
         if [ ${#not_present[@]} -ne 0 ]; then
-            error "$(gettext "Please install $TYPE : %s" )" "${not_present[@]}"
+            error "$(gettext "($TYPE) Please install : %s" )" "${not_present[@]}"
             exit 1
+        else
+            msg2 "$(gettext "Sucess" )"
         fi
 
     fi
