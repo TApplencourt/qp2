@@ -50,7 +50,7 @@ long int bielec_integrals_index(const int i, const int j, const int k, const int
             n{1,4} the number of AO in (mn,rs) respectively
             bf{1,4}_first the index of the first basis function in thhis shell
 */
-void send_buffer(void* collector_socket, int task_id, const vector<double> &renorm,
+void send_buffer(void* collector_socket, int task_id, const vector<double>& renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234);
@@ -79,7 +79,7 @@ bielec_integrals_index(const int i, const int j, const int k, const int l)
     return i1 + ((i2 * i2 - i2) >> 1);
 }
 
-void send_buffer(void* collector_socket, int task_id, const vector<double> &renorm,
+void send_buffer(void* collector_socket, int task_id, const vector<double>& renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
     const double* buf_1234)
@@ -130,7 +130,7 @@ void send_buffer(void* collector_socket, int task_id, const vector<double> &reno
             const double fn1 = renorm[bf1];
             for (int f2 = 0; f2 < n2; ++f2) {
                 const int bf2 = f2 + bf2_first;
-                 const double fn2 = renorm[bf2] * fn1;
+                const double fn2 = renorm[bf2] * fn1;
                 for (int f3 = 0; f3 < n3; ++f3) {
                     const int bf3 = f3 + bf3_first;
                     const double fn3 = renorm[bf3] * fn2;
@@ -147,7 +147,7 @@ void send_buffer(void* collector_socket, int task_id, const vector<double> &reno
                                 buffer_value[n_integrals] = buf_1234[f1234] * fn4;
                                 n_integrals += 1;
                             }
-                          }
+                        }
                     }
                 }
             }
@@ -253,10 +253,6 @@ void print_usage()
     printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
     printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
     printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
-
-
-
-
 }
 
 int main(int argc, char* argv[])
@@ -342,7 +338,6 @@ int main(int argc, char* argv[])
 
     libint2::init(); // do not use libint before this
 
-
     /*** ============================ **/
     /*** Compute schwartz             **/
     /*** ============================ **/
@@ -380,12 +375,12 @@ int main(int argc, char* argv[])
                             continue;
 
                         sprintf(msg, "add_task ao_integrals %6d %6d %6d %6d", s1, s2, s3, s4);
-                        rc = zmq_send(qp_run_socket, msg, (size_t) 50, 0);
+                        rc = zmq_send(qp_run_socket, msg, (size_t)50, 0);
                         if (rc != 50) {
                             perror("Error sending the task");
                             exit(EXIT_FAILURE);
                         }
-                        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
+                        rc = zmq_recv(qp_run_socket, msg, (size_t)510, 0);
                         if (rc != 2) {
                             perror(msg);
                             exit(EXIT_FAILURE);
@@ -408,30 +403,30 @@ int main(int argc, char* argv[])
         // ...
 
         libint2::OneBodyEngine onebody_engine(libint2::OneBodyEngine::overlap, // will compute overlap ints
-                                              obs.max_nprim(), // max # of primitives in shells this engine will accept
-                                              obs.max_l()      // max angular momentum of shells this engine will accept
-                                            );
+            obs.max_nprim(), // max # of primitives in shells this engine will accept
+            obs.max_l() // max angular momentum of shells this engine will accept
+            );
 
         /* Compute renormalization factors for AOs due to <xy|xy> != <xx|xx> */
-        vector <double> renorm(nao);
-        for(int s1=0; s1<nshell; s1++) {
-          const auto* ints_shellset = onebody_engine.compute(obs[s1], obs[s1]);
-          const int n1=obs[s1].size();
-          const int bf1_first = shell2bf[s1];
-          for (int bf1=0 ; bf1 < n1 ; bf1++) {
-            const int ao_idx = bf1_first + bf1;
-            const int diag_idx = bf1*n1 + bf1;
-            renorm[ao_idx] = sqrt(ints_shellset[0]/ints_shellset[diag_idx]);
-          }
+        vector<double> renorm(nao);
+        for (int s1 = 0; s1 < nshell; s1++) {
+            const auto* ints_shellset = onebody_engine.compute(obs[s1], obs[s1]);
+            const int n1 = obs[s1].size();
+            const int bf1_first = shell2bf[s1];
+            for (int bf1 = 0; bf1 < n1; bf1++) {
+                const int ao_idx = bf1_first + bf1;
+                const int diag_idx = bf1 * n1 + bf1;
+                renorm[ao_idx] = sqrt(ints_shellset[0] / ints_shellset[diag_idx]);
+            }
         }
 
-        rc = zmq_send(qp_run_socket, "connect tcp", (size_t) 11, 0);
+        rc = zmq_send(qp_run_socket, "connect tcp", (size_t)11, 0);
         if (rc != 11) {
             perror("Error connecting to the task server");
             exit(EXIT_FAILURE);
         }
 
-        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
+        rc = zmq_recv(qp_run_socket, msg, (size_t)510, 0);
         msg[rc] = '\0';
         char reply[32], state[32], collector_address[128];
         int worker_id;
@@ -455,12 +450,12 @@ int main(int argc, char* argv[])
         int task_id;
         while (1) {
             sprintf(msg, "get_task ao_integrals %8d", worker_id);
-            rc = zmq_send(qp_run_socket, msg, (size_t) 30, 0);
+            rc = zmq_send(qp_run_socket, msg, (size_t)30, 0);
             if (rc != 30) {
                 perror("Error connecting the push socket");
                 exit(EXIT_FAILURE);
             }
-            rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
+            rc = zmq_recv(qp_run_socket, msg, (size_t)510, 0);
             msg[rc] = '\0';
             int s1, s2, s3, s4;
             sscanf(msg, "%s %d %d %d %d %d", reply, &task_id, &s1, &s2, &s3, &s4);
@@ -488,7 +483,7 @@ int main(int argc, char* argv[])
                 perror("Error sending task_done");
                 exit(EXIT_FAILURE);
             }
-            rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
+            rc = zmq_recv(qp_run_socket, msg, (size_t)510, 0);
             if (rc != 2) {
                 perror(msg);
                 exit(EXIT_FAILURE);
@@ -507,7 +502,7 @@ int main(int argc, char* argv[])
             perror("Error sending disconnect");
             exit(EXIT_FAILURE);
         }
-        rc = zmq_recv(qp_run_socket, msg, (size_t) 510, 0);
+        rc = zmq_recv(qp_run_socket, msg, (size_t)510, 0);
         msg[rc] = '\0';
         sscanf(msg, "%s %s", reply, state);
         if (strcmp(reply, "disconnect_reply") || strcmp(state, "ao_integrals")) {
