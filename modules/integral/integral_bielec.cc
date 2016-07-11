@@ -93,6 +93,10 @@ void append_buffer(vector<long int>& buffer_i,
           we have no permutation to handle.
           Else, you have to take care of the possible duplicate.
           */
+    const int n_integral = buffer_i.size();
+    buffer_i.reserve(n_integral+n1*n2*n3*n4);
+    buffer_value.reserve(n_integral+n1*n2*n3*n4);
+    
     if (n1 != n2 && n1 != n3 && n1 != n4 && n2 != n3 && n2 != n4 && n3 != n4) {
 
         for (auto f1 = 0, f1234 = 0; f1 < n1; ++f1) {
