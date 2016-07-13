@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include <sys/stat.h>
 #include <math.h>
+#include <unordered_set>
 
 using namespace std;
 
@@ -55,7 +56,7 @@ void append_buffer(vector<long int>& buffer_i,
     const vector<double>& renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
-    const double* buf_1234);
+    const double* buf_1234, int& n_integrals);
 
 /***
  *     ___                                                    
@@ -85,7 +86,7 @@ void append_buffer(vector<long int>& buffer_i,
     const vector<double>& renorm,
     const int n1, const int n2, const int n3, const int n4,
     const int bf1_first, const int bf2_first, const int bf3_first, const int bf4_first,
-    const double* buf_1234)
+    const double* buf_1234, int& n_integrals)
 {
     /**
           loop over all the basis function in the buffer
@@ -93,10 +94,6 @@ void append_buffer(vector<long int>& buffer_i,
           we have no permutation to handle.
           Else, you have to take care of the possible duplicate.
           */
-    const int n_integral_new = buffer_i.size() + n1*n2*n3*n4;
-    buffer_i.reserve(n_integral_new);
-    buffer_value.reserve(n_integral_new);
-    
     if (n1 != n2 && n1 != n3 && n1 != n4 && n2 != n3 && n2 != n4 && n3 != n4) {
 
         for (auto f1 = 0, f1234 = 0; f1 < n1; ++f1) {
@@ -113,9 +110,14 @@ void append_buffer(vector<long int>& buffer_i,
                         const double fn4 = renorm[bf4] * fn3;
 
                         if (fabs(buf_1234[f1234]) > precision) {
+                            if (n_integrals == buffer_i.size()) {
+                              buffer_i.resize(n_integrals+1000000);
+                              buffer_value.resize(n_integrals+1000000);
+                            }
                             const long int key = bielec_integrals_index(bf1, bf3, bf2, bf4);
-                            buffer_i.push_back(key);
-                            buffer_value.push_back(buf_1234[f1234] * fn4);
+                            buffer_i[n_integrals] = key;
+                            buffer_value[n_integrals] = buf_1234[f1234] * fn4;
+                            n_integrals++;
                         }
                     }
                 }
@@ -125,28 +127,35 @@ void append_buffer(vector<long int>& buffer_i,
     else {
 
         //Vector to store the uniq key of the quartet
-        set<long int> uniq;
+        unordered_set<long int> uniq;
 
-        for (int f1 = 0, f1234 = 0; f1 < n1; ++f1) {
+        for (int f1 = 0 ; f1 < n1; ++f1) {
             const int bf1 = f1 + bf1_first;
             const double fn1 = renorm[bf1];
             for (int f2 = 0; f2 < n2; ++f2) {
                 const int bf2 = f2 + bf2_first;
+                if (bf1 < bf2) break;
                 const double fn2 = renorm[bf2] * fn1;
                 for (int f3 = 0; f3 < n3; ++f3) {
                     const int bf3 = f3 + bf3_first;
                     const double fn3 = renorm[bf3] * fn2;
+                    int f1234 = ( (f1*n2 + f2)*n3 + f3)*n4;
                     for (int f4 = 0; f4 < n4; ++f4, ++f1234) {
+                        const int bf4 = f4 + bf4_first;
+                        if (bf3 < bf4) break;
                         if (fabs(buf_1234[f1234]) > precision) {
-                            const int bf4 = f4 + bf4_first;
                             const double fn4 = renorm[bf4] * fn3;
-
                             const long int key = bielec_integrals_index(bf1, bf3, bf2, bf4);
                             //Check if the quartet has been already computed
                             if (uniq.find(key) == uniq.end()) {
                                 uniq.insert(key);
-                                buffer_i.push_back(key);
-                                buffer_value.push_back(buf_1234[f1234] * fn4);
+                                  if (n_integrals == buffer_i.size()) {
+                                    buffer_i.resize(n_integrals+1000000);
+                                    buffer_value.resize(n_integrals+1000000);
+                                  }
+                                  buffer_i[n_integrals] = key;
+                                  buffer_value[n_integrals] = buf_1234[f1234] * fn4;
+                                  n_integrals++;
                             }
                         }
                     }
@@ -332,12 +341,12 @@ int main(int argc, char* argv[])
         /*TODO
         * compute MN shell pair for better load balancing
         */
-        for (auto s1 = 0l, s1234 = 0l; s1 < nshell; ++s1) {
+        for (auto s1 = 0l; s1 < nshell; ++s1) {
             for (auto s2 = 0; s2 <= s1; ++s2) {
 
                 sprintf(msg, "add_task ao_integrals %6d %6d", s1, s2);
                 rc = zmq_send(qp_run_socket, msg, (size_t)36, 0);
-                if (rc != 50) {
+                if (rc != 36) {
                     perror("Error sending the task");
                     exit(EXIT_FAILURE);
                 }
@@ -407,6 +416,9 @@ int main(int argc, char* argv[])
         }
 
         int task_id;
+        int n_integral_max = nao * nao;
+        vector<long int> buffer_i(n_integral_max);
+        vector<double> buffer_value(n_integral_max);
         while (1) {
             sprintf(msg, "get_task ao_integrals %8d", worker_id);
             rc = zmq_send(qp_run_socket, msg, (size_t)30, 0);
@@ -421,24 +433,22 @@ int main(int argc, char* argv[])
             if (!strcmp(reply, "terminate"))
                 break;
 
-            vector<long int> buffer_i;
-            vector<double> buffer_value;
+            const auto bf1_first = shell2bf[s1]; // first basis function in this shell
+            const auto n1 = obs[s1].size(); // number of basis functions in this shell
 
+            const auto bf2_first = shell2bf[s2];
+            const auto n2 = obs[s2].size();
+
+            int n_integrals = 0;
             // Compute the task
             for (auto s3 = 0; s3 <= s1; ++s3) {
+                const auto bf3_first = shell2bf[s3];
+                const auto n3 = obs[s3].size();
+
                 const auto s4_max = (s1 == s3) ? s2 : s3;
                 for (auto s4 = 0; s4 <= s4_max; ++s4) {
                     if (Schwartz(s1, s2) * Schwartz(s3, s4) < precision)
                         continue;
-
-                    const auto bf1_first = shell2bf[s1]; // first basis function in this shell
-                    const auto n1 = obs[s1].size(); // number of basis functions in this shell
-
-                    const auto bf2_first = shell2bf[s2];
-                    const auto n2 = obs[s2].size();
-
-                    const auto bf3_first = shell2bf[s3];
-                    const auto n3 = obs[s3].size();
 
                     const auto bf4_first = shell2bf[s4];
                     const auto n4 = obs[s4].size();
@@ -448,7 +458,7 @@ int main(int argc, char* argv[])
                     append_buffer(buffer_i, buffer_value, renorm,
                         n1, n2, n3, n4,
                         bf1_first, bf2_first, bf3_first, bf4_first,
-                        buf_1234);
+                        buf_1234, n_integrals);
                 }
             }
 
@@ -469,8 +479,6 @@ int main(int argc, char* argv[])
             }
 
             // Send it to the collector_socket
-            const int n_integrals = buffer_i.size();
-
             msg_len = 4;
             rc = zmq_send(collector_socket, &n_integrals, msg_len, ZMQ_SNDMORE);
             if (rc != 4) {
