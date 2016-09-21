@@ -1,0 +1,27 @@
+{
+    "nuclei": [
+            {
+                "name": "nucl_charge",
+                "shape": "[nuclei.nucl_num]",
+                "type": "double"
+            },
+            {
+                "name": "nucl_coord",
+                "shape": "[nuclei.nucl_num,3]",
+                "type": "double"
+            },
+            {
+                "name": "nucl_label",
+                "shape": "[nuclei.nucl_num]",
+                "type": "char[32]"
+            },
+            {
+                "name": "nucl_num",
+                "type": "int"
+            },
+            {
+                "name": "xyz",
+                "type": "raw"
+            },
+        ]
+}

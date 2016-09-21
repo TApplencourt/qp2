@@ -3,15 +3,15 @@
 pkgname=electrons
 pkgver=0.1
 pkgdesc="Library of utilities and providers"
-source=(electrons.irp.f Makefile test_electrons.irp.f zezfio_interface.irp.f)
+source=(Makefile *.irp.f electrons.json)
 
 irp_depends=("utils_irp")
 
 build() {
-	export BUILD=1
-	make 
+	BUILD=1 make 
 }
 
 package() {
 	cp test_electrons ${pkgdir}/usr/bin/
+	cp electrons.json ${pkgdir}/usr/share/json/
 }

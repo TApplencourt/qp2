@@ -1,0 +1,18 @@
+#!/bin/bash
+
+pkgname=nuclei
+pkgver=0.1
+pkgdesc="Providers of nuclei"
+source=(nuclei.json Makefile *.irp.f)
+
+irp_depends=(utils_irp)
+lib_depends=(libzezfio_f)
+
+build() {
+	BUILD=1 make 
+}
+
+package() {
+	cp nuclei.json ${pkgdir}/usr/share/json
+	cp test_nuclei ${pkgdir}/usr/bin/
+}

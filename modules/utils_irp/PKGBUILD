@@ -3,12 +3,12 @@
 pkgname=utils_irp
 pkgver=0.1
 pkgdesc="Library of utilities and providers"
-source=(Makefile test_utils.irp.f Zezfio.irp.f) 
+source=(Makefile *.irp.f *.f90)
 
 irp_depends=()
 
 build() {
-	make
+	BUILD=1 make
 }
 
 package() {

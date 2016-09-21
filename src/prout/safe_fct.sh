@@ -98,7 +98,7 @@ unsafe_package() {
 
     if fn_exists package; then
 
-        mkdir -p  ${pkgdir}/usr/bin ${pkgdir}/usr/include ${pkgdir}/usr/share ${pkgdir}/usr/lib        
+        mkdir -p  ${pkgdir}/usr/{bin,local,include,share/{json,bashrc.d},lib}  
 
         travel ${srcdir} package
         update_db
