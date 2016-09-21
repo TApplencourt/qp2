@@ -1,0 +1,16 @@
+#!/bin/bash
+
+pkgname=utils_irp
+pkgver=0.1
+pkgdesc="Library of utilities and providers"
+source=(Makefile test_utils.irp.f Zezfio.irp.f) 
+
+irp_depends=()
+
+build() {
+	make
+}
+
+package() {
+	cp test_utils ${pkgdir}/usr/bin/
+}

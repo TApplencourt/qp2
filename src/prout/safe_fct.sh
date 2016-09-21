@@ -37,18 +37,20 @@ unsafe_source() {
 
         l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | xargs gardener irp_depends | sequoia $pkgname)
         for child_pkgname in ${l_pkgbuild[@]}; do
-
-            local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | xargs egrep -l "pkgname=\W$child_pkgname\W")
+            #Get the full path of all the dependancy of pkgfile
+            local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | xargs egrep -l "pkgname=$child_pkgname")
+            if [ -z ${child_pkgfile}  ]; then
+                error "$(gettext "Cannot find the full path of module in irp_depends")"
+                exit 1
+            fi
 
             if [ ! -f $child_pkgfile ]; then
-                error "$(gettext "%s is not a valid name for irp_depend")" $pkgname
+                error "$(gettext "%s is not a valid name for irp_depends")" $pkgname
                 exit 1
             else
-
                 startdir_children=$(dirname $child_pkgfile)
                 srcdir_parent="${startdir}/src/$child_pkgname/"
 
-                echo $child_pkgfile
                 (
                 source $child_pkgfile
                 fn_source 1 $startdir_children $srcdir_parent ${source[@]}

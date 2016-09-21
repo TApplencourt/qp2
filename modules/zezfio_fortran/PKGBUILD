@@ -1,0 +1,19 @@
+#!/bin/bash
+
+pkgname=libzezfio_f
+pkgver=0.1
+pkgdesc="Fortran interface for Zezfio"
+url=
+source=(https://raw.githubusercontent.com/TApplencourt/Zezfio2/master/zezfio/lib/libzezfio_f.f90)
+lib_depends=(libzmq libf77zmq)
+
+LIBRARY=libzezfio_f.so
+FC=${FC:-gfortran}
+
+build() {
+	$FC -shared -fPIC -I"${qp_root}/usr/include" -c ${LIBRARY/.so/.f90} -o $LIBRARY
+}
+
+package() {
+	cp $LIBRARY "$pkgdir/usr/lib"
+}

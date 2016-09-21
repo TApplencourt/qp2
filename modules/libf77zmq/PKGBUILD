@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pkgname=f77_zeromq
+pkgname=libf77zmq
 pkgver=1.0.1
 pkgdesc="A Fortran 77 binding library for ZeroMQ"
 url="https://github.com/zeromq/f77_zmq"

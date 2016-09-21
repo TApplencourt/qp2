@@ -27,13 +27,13 @@ All these dependency will be checked whenever you will `build` the package.
 An array of packages this package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name. If the package where not in the database, `prout` will check is the package is avalaible via `command -v`.
 
 ##### irp_depends (optional/array)
-An array of irp_packages this irp_package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name.  `prout` will create symlink in the `srcdir` relative the these packages.
+An array of IRPF90 packages this package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name.  `prout` will create symlink in the `srcdir` relative the these packages.
 
 ##### python_depends (optional/array)
-An array of irp_packages this irp_package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name. `prout` will check is the package is avalaible via `python -c "import ${package}"`.
+An array of python packages this package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name. `prout` will check is the package is avalaible via `python -c "import ${package}"`.
 
 ##### ocaml_depends (optional/array)
-An array of irp_packages this irp_package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name.  `prout` will check is the package is avalaible via `opam list`.
+An array of OCaml packages this package depends on to run. Entries in this list should be surrounded with single quotes and contain at least the package name.  `prout` will check is the package is avalaible via `opam list`.
 
 ## Packaging Functions
 
