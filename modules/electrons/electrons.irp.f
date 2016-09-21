@@ -1,14 +1,3 @@
-BEGIN_PROVIDER [ integer, elec_num ]
-  
-  implicit none
-  BEGIN_DOC
-  ! Total number of electrons
-  END_DOC
-  
-  elec_num = elec_alpha_num + elec_beta_num
-  
-END_PROVIDER
-
 BEGIN_PROVIDER [ integer, elec_num_tab, (2)]
   
   implicit none

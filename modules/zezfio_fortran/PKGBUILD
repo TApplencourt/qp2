@@ -5,7 +5,8 @@ pkgver=0.1
 pkgdesc="Fortran interface for Zezfio"
 url=
 source=(https://raw.githubusercontent.com/TApplencourt/Zezfio2/master/zezfio/lib/libzezfio_f.f90)
-lib_depends=(libzmq libf77zmq)
+lib_depends=(libf77zmq)
+py_depends=(zezfio)
 
 LIBRARY=libzezfio_f.so
 FC=${FC:-gfortran}

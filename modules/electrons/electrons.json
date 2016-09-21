@@ -1,0 +1,26 @@
+{
+ "electrons": {
+     "attributes": [
+         {
+             "type": "int",
+             "name": "elec_alpha_num",
+             "doc" : "Number of alpha electrons (>0 and >= elec_beta_num)",
+             "ocaml_type" : "Strictly_positive_int"
+         },
+         {
+             "type": "int",
+             "name": "elec_beta_num",
+             "doc" : "Number of beta electrons (>=0)",
+             "ocaml_type" : "Positive_int"
+         },
+         {
+             "type": "int",
+             "name": "elec_num",
+             "doc" : "Number of electrons (>0)",
+             "default": " electrons.elec_alpha_num + electrons.elec_beta_num",
+             "ocaml_type" : "Strictly_positive_int"
+         }
+     ]
+ }
+}
+
