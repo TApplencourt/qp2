@@ -328,14 +328,15 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
 
     //From zezfio 
-    string order="get.nuclei.xyz";
-    rc = zmq_send(zezfio_socket,order.c_str(),sizeof(order),0);
+    const char *order = "get.nuclei.xyz";
+    rc = zmq_send(zezfio_socket,order,strlen(order)*sizeof(char),0);
 
     int net_int;
-    rc = zmq_recv(zezfio_socket, &net_int, 4, 0);
-    msg_len = ntohl(net_int); //Deal with endian
+    rc = zmq_recv(zezfio_socket, &net_int, sizeof(int), 0);
+//    msg_len = ntohl(net_int); //Deal with endian
+    msg_len = net_int; 
 
-    char* xyz_data = new char[msg_len];
+    char xyz_data[msg_len];
     rc = zmq_recv(zezfio_socket, xyz_data, msg_len, 0);
     std::istringstream input_file((std::string(xyz_data)));
     
@@ -358,24 +359,28 @@ int main(int argc, char* argv[])
 
     const pid_t pid = getpid();
 
-    sprintf(msg, "/dev/shm/%ld/LIBINT_DATA_PATH", long(getpid()));
-    rc = mkdir(msg, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    char libint_data_path[512];
+    sprintf(libint_data_path, "/dev/shm/%ld/LIBINT_DATA_PATH", (long) getpid());
+    rc = mkdir(libint_data_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    sprintf(msg, "LIBINT_DATA_PATH=%s", libint_data_path);
     putenv(msg);
 
 
-    order="get.nuclei.basis";
-    rc = zmq_send(zezfio_socket,order.c_str(),sizeof(order),0);
-
+    const char* order2 = "get.ao.basis_g94";
+    rc = zmq_send(zezfio_socket,order2,strlen(order2)*sizeof(char),0);
     rc = zmq_recv(zezfio_socket, &net_int, 4, 0);
-    msg_len = ntohl(net_int); //Deal with endian
+//    msg_len = ntohl(net_int); //Deal with endian
+    msg_len = net_int;
 
-    char* basis_data = new char[msg_len];
+    char basis_data[msg_len];
     rc = zmq_recv(zezfio_socket, basis_data, msg_len, 0);
 
 
-    std::string basis_name = "zezfio.g94";
-//    std::string basis_path = msg +"/" + basis_name;
-    std::string basis_path = "WTF"
+    const char* basis_name = "zezfio.g94";
+    char basis_path[512];
+    strcpy(basis_path, msg);
+    strcat(basis_path,"/");
+    strcat(basis_path,basis_name);
 
     ofstream myfile;
     myfile.open(basis_name);

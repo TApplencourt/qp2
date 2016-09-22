@@ -5,6 +5,9 @@ pkgver=0.1
 pkgdesc="Library of utilities and providers"
 source=(Makefile *.irp.f electrons.json)
 
+in_program=(elec.elec_num)
+out_program=(elec.nuclei_roger)
+
 irp_depends=("utils_irp")
 
 build() {
