@@ -334,7 +334,7 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
 
 
-    const char* order_basis = "get.ao.basis_g94";
+    const char* order_basis = "get.ao_basis.basis_g94";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
@@ -384,6 +384,7 @@ int main(int argc, char* argv[])
     rc = remove(basis_path);
     rc = rmdir(libint_data_path);
     rc = rmdir(shm_pid_path);
+    zmq_close(zezfio_socket);
 
 
     const size_t nshell = obs.size();
@@ -480,6 +481,13 @@ Operator::coulomb;
         }
 
         void* collector_socket = zmq_socket(context, ZMQ_PUSH);
+        int i;
+        i=300000    ; zmq_setsockopt(collector_socket, ZMQ_LINGER,&i,4);
+        i=10        ; zmq_setsockopt(collector_socket, ZMQ_SNDHWM,&i,4);
+        i=100000000 ; zmq_setsockopt(collector_socket, ZMQ_SNDBUF,&i,4);
+        i=1         ; zmq_setsockopt(collector_socket, ZMQ_IMMEDIATE,&i,4);
+        i=-1        ; zmq_setsockopt(collector_socket, ZMQ_SNDTIMEO,&i,4);
+
         rc = zmq_connect(collector_socket, collector_address);
         if (rc != 0) {
             perror("Error connecting the push socket");
@@ -501,7 +509,7 @@ Operator::coulomb;
             msg[rc] = '\0';
             int s1, s2;
             sscanf(msg, "%s %d %d %d", reply, &task_id, &s1, &s2);
-            if (!strcmp(reply, "terminate"))
+            if (task_id == 0)
                 break;
 
             const auto bf1_first = shell2bf[s1]; // first basis function in this shell
@@ -594,18 +602,14 @@ Operator::coulomb;
             exit(EXIT_FAILURE);
         }
 
-        int value = 0;
-        rc = zmq_disconnect(collector_socket, collector_address);
-        rc = zmq_setsockopt(collector_socket, ZMQ_LINGER, &value, 4);
         rc = zmq_close(collector_socket);
     }
 
-    int value = 0;
-    rc = zmq_disconnect(qp_run_socket, task_scheduler_address.c_str());
-    rc = zmq_setsockopt(qp_run_socket, ZMQ_LINGER, &value, 4);
+
     rc = zmq_close(qp_run_socket);
 
-
     libint2::finalize(); // do not use libint after this
+    zmq_ctx_destroy (context);
+
     return 0;
 }
