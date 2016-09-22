@@ -1,2 +1,9 @@
 #include <libint2.hpp>
-libint2::BasisSet zezfio2obs(void*);
+
+struct Atom_Obs
+{
+    std::vector<libint2::Atom> atoms;
+    libint2::BasisSet obs;
+};
+
+Atom_Obs zezfio2libint(void*);

@@ -3,7 +3,7 @@
 #include <zmq.h> 
 #include <vector>
 
-libint2::BasisSet zezfio2obs(void* zezfio_socket){
+Atom_Obs zezfio2libint(void* zezfio_socket){
 
     int rc, zerrno, msg_len;
 
@@ -43,9 +43,6 @@ libint2::BasisSet zezfio2obs(void* zezfio_socket){
     char * basis_data = (char *)malloc(msg_len * sizeof(char));
     rc = zmq_recv(zezfio_socket, basis_data, msg_len, 0);
 
-
-    const pid_t pid = getpid();
-
     char shm_pid_path[512];
     sprintf(shm_pid_path, "/dev/shm/%ld", (long) getpid());
     rc = mkdir(shm_pid_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -76,10 +73,14 @@ libint2::BasisSet zezfio2obs(void* zezfio_socket){
     libint2::BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
+    Atom_Obs ao;
+    ao.atoms = atoms;
+    ao.obs = obs;
+
     //Cleaning.
     rc = remove(basis_path);
     rc = rmdir(libint_data_path);
     rc = rmdir(shm_pid_path);
-
-    return obs;
+    return ao;
 }
+
