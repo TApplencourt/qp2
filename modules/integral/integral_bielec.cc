@@ -9,6 +9,9 @@
 #include <sys/stat.h>
 #include <math.h>
 #include <unordered_set>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 using namespace std;
 
@@ -51,7 +54,7 @@ long int bielec_integrals_index(const int i, const int j, const int k, const int
             n{1,4} the number of AO in (mn,rs) respectively
             bf{1,4}_first the index of the first basis function in thhis shell
 */
-void append_buffer(vector<long int>& buffer_i,
+void  append_buffer(vector<long int>& buffer_i,
     vector<double>& buffer_value,
     const vector<double>& renorm,
     const int n1, const int n2, const int n3, const int n4,
@@ -221,15 +224,16 @@ void print_usage()
     printf("  integral_bielect [OPTION]\n");
 
     printf("\nOPTION\n");
-    printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
-    printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
-    printf("    -a, --address <name> : The address of the task server\n");
-    printf("    -t  --task           : Create the Task\n");
+//    printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
+//    printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
+    printf("    -a, --address <name>        : The address of the task server\n");
+    printf("    -z, --zezfio_address <name> : The address of the zezfio server\n");
+    printf("    -t  --task                  : Create the Task\n");
 
-    printf("\nNOTA BENE\n");
-    printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
-    printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
-    printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
+//    printf("\nNOTA BENE\n");
+//    printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
+//    printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
+//    printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
 }
 
 int main(int argc, char* argv[])
@@ -246,14 +250,17 @@ int main(int argc, char* argv[])
         { "help", no_argument, 0, 'h' },
         { "task", no_argument, 0, 't' },
         { "address", required_argument, 0, 'a' },
-        { "xyz", required_argument, 0, 'x' },
-        { "basis", required_argument, 0, 'b' },
+        { "zezfio_address",required_argument,0, 'z'},
+//        { "xyz", required_argument, 0, 'x' },
+//        { "basis", required_argument, 0, 'b' },
         { 0, 0, 0, 0 }
     };
 
-    string xyz_path;
-    string basis_name;
+//    string xyz_path;
+//    string basis_name;
     string task_scheduler_address;
+    string zezfio_address;
+
     int do_task = 0;
 
     int iarg = 0;
@@ -270,41 +277,111 @@ int main(int argc, char* argv[])
         case 'a':
             task_scheduler_address = optarg;
             break;
-        case 'x':
-            xyz_path = optarg;
+        case 'z':
+            zezfio_address = optarg;
             break;
-        case 'b':
-            basis_name = optarg;
-            break;
+//        case 'x':
+//            xyz_path = optarg;
+//            break;
+//        case 'b':
+//            basis_name = optarg;
+//            break;
         default:
             print_usage();
             return 1;
         }
     }
 
-    if (xyz_path.empty() || basis_name.empty() || task_scheduler_address.empty()) {
-        print_usage();
-        return 1;
+//    if (xyz_path.empty() || basis_name.empty() || task_scheduler_address.empty()) {
+//        print_usage();
+//        return 1;
+//    }
+
+
+    /*** ======= **/
+    /*** ZeroMQ  **/
+    /*** ======= **/
+
+    int rc;
+    void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
+    void* qp_run_socket = zmq_socket(context, ZMQ_REQ);
+    void* zezfio_socket = zmq_socket(context, ZMQ_REQ);
+
+    rc = zmq_connect(qp_run_socket, task_scheduler_address.c_str());
+    if (rc != 0) {
+        perror("Error connecting the qp_run_socket");
+        exit(EXIT_FAILURE);
     }
+
+    rc = zmq_connect(qp_run_socket, zezfio_address.c_str());
+    if (rc != 0) {
+        perror("Error connecting the zezfio_socket");
+        exit(EXIT_FAILURE);
+    }
+
+    char msg[512];
+    size_t msg_len;
+
 
     /*** =========================== ***/
     /*** initialize molecule         ***/
     /*** =========================== ***/
-    struct stat buffer;
+
+    //From zezfio 
+    string order="get.nuclei.xyz";
+    rc = zmq_send(zezfio_socket,order.c_str(),sizeof(order),0);
+
+    int net_int;
+    rc = zmq_recv(zezfio_socket, &net_int, 4, 0);
+    msg_len = ntohl(net_int); //Deal with endian
+
+    char* xyz_data = new char[msg_len];
+    rc = zmq_recv(zezfio_socket, xyz_data, msg_len, 0);
+    std::istringstream input_file((std::string(xyz_data)));
+    
+    //From path
+    
+    /* struct stat buffer;
     if (stat(xyz_path.c_str(), &buffer) != 0) {
         printf("%s:\n", xyz_path.c_str());
         perror("The xyz file do not exists");
         return 1;
     }
-
     ifstream input_file(xyz_path);
-    vector<Atom> atoms = libint2::read_dotxyz(input_file);
+    */
 
+    vector<Atom> atoms = libint2::read_dotxyz(input_file);
+    
     /*** =========================== ***/
     /*** create basis set            ***/
     /*** =========================== ***/
-    // export LIBINT_DATA_PATH="$qp_root"/usr/share/libint/2.1.0-beta/basis/
 
+    const pid_t pid = getpid();
+
+    sprintf(msg, "/dev/shm/%ld/LIBINT_DATA_PATH", long(getpid()));
+    rc = mkdir(msg, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    putenv(msg);
+
+
+    order="get.nuclei.basis";
+    rc = zmq_send(zezfio_socket,order.c_str(),sizeof(order),0);
+
+    rc = zmq_recv(zezfio_socket, &net_int, 4, 0);
+    msg_len = ntohl(net_int); //Deal with endian
+
+    char* basis_data = new char[msg_len];
+    rc = zmq_recv(zezfio_socket, basis_data, msg_len, 0);
+
+
+    std::string basis_name = "zezfio.g94";
+//    std::string basis_path = msg +"/" + basis_name;
+    std::string basis_path = "WTF"
+
+    ofstream myfile;
+    myfile.open(basis_name);
+    myfile << basis_data;
+    myfile.close();
+  
     libint2::Shell::do_enforce_unit_normalization(false);
     BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
@@ -321,21 +398,6 @@ int main(int argc, char* argv[])
 
     const auto Schwartz = compute_schwartz_ints(obs);
 
-    /*** ======= **/
-    /*** ZeroMQ  **/
-    /*** ======= **/
-
-    int rc;
-    void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
-    void* qp_run_socket = zmq_socket(context, ZMQ_REQ);
-    rc = zmq_connect(qp_run_socket, task_scheduler_address.c_str());
-    if (rc != 0) {
-        perror("Error connecting the socket");
-        exit(EXIT_FAILURE);
-    }
-
-    char msg[512];
-    size_t msg_len;
 
     if (do_task) {
         /*TODO
