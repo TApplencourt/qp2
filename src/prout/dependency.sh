@@ -13,6 +13,7 @@ check_one_depend(){
             error "$(gettext "Please install gcc")"
             exit 1
         fi
+        echo "int main() {}" > $tempfile
         gcc -l${depend/#lib/} ${tempfile} -o /dev/null &>/dev/null
         exit_code=$?
         rm -- ${tempfile}
