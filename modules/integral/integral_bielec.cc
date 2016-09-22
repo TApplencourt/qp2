@@ -224,16 +224,9 @@ void print_usage()
     printf("  integral_bielect [OPTION]\n");
 
     printf("\nOPTION\n");
-//    printf("    -x, --xyz   <path>   : The location of the xyz geometry file\n");
-//    printf("    -b, --basis <name>   : The name of the basis set in 94 format\n");
     printf("    -a, --address <name>        : The address of the task server\n");
     printf("    -z, --zezfio_address <name> : The address of the zezfio server\n");
     printf("    -t  --task                  : Create the Task\n");
-
-//    printf("\nNOTA BENE\n");
-//    printf("  The basis set need to be present in $LIBINT_DATA_PATH\n");
-//    printf("  The standard path is $qp_root/usr/share/libint/2.1.0-beta/basis/\n");
-//    printf("  export LIBINT_DATA_PATH=$qp_root/usr/share/libint/2.1.0-beta/basis/\n");
 }
 
 int main(int argc, char* argv[])
@@ -251,13 +244,9 @@ int main(int argc, char* argv[])
         { "task", no_argument, 0, 't' },
         { "address", required_argument, 0, 'a' },
         { "zezfio_address",required_argument,0, 'z'},
-//        { "xyz", required_argument, 0, 'x' },
-//        { "basis", required_argument, 0, 'b' },
         { 0, 0, 0, 0 }
     };
 
-//    string xyz_path;
-//    string basis_name;
     string task_scheduler_address;
     string zezfio_address;
 
@@ -266,7 +255,7 @@ int main(int argc, char* argv[])
     int iarg = 0;
     //switch getopt error message
     opterr = 1;
-    while ((iarg = getopt_long(argc, argv, "ha:tx:b:m:", long_options, NULL)) != -1) {
+    while ((iarg = getopt_long(argc, argv, "ha:z:tm:", long_options, NULL)) != -1) {
 
         switch (iarg) {
         case 'h':
@@ -280,22 +269,16 @@ int main(int argc, char* argv[])
         case 'z':
             zezfio_address = optarg;
             break;
-//        case 'x':
-//            xyz_path = optarg;
-//            break;
-//        case 'b':
-//            basis_name = optarg;
-//            break;
         default:
             print_usage();
             return 1;
         }
     }
 
-//    if (xyz_path.empty() || basis_name.empty() || task_scheduler_address.empty()) {
-//        print_usage();
-//        return 1;
-//    }
+    if ( zezfio_address.empty() || task_scheduler_address.empty()) {
+        print_usage();
+        return 1;
+    }
 
 
     /*** ======= **/
@@ -303,6 +286,9 @@ int main(int argc, char* argv[])
     /*** ======= **/
 
     int rc;
+    int zerrno;
+    int msg_len;
+
     void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
     void* qp_run_socket = zmq_socket(context, ZMQ_REQ);
     void* zezfio_socket = zmq_socket(context, ZMQ_REQ);
@@ -313,14 +299,13 @@ int main(int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    rc = zmq_connect(qp_run_socket, zezfio_address.c_str());
+    rc = zmq_connect(zezfio_socket, zezfio_address.c_str());
     if (rc != 0) {
         perror("Error connecting the zezfio_socket");
         exit(EXIT_FAILURE);
     }
 
-    char msg[512];
-    size_t msg_len;
+
 
 
     /*** =========================== ***/
@@ -328,72 +313,83 @@ int main(int argc, char* argv[])
     /*** =========================== ***/
 
     //From zezfio 
-    const char *order = "get.nuclei.xyz";
-    rc = zmq_send(zezfio_socket,order,strlen(order)*sizeof(char),0);
+    const char *order_nuclei = "get.nuclei.xyz";
+    rc = zmq_send(zezfio_socket,order_nuclei,strlen(order_nuclei)*sizeof(char),0);
 
-    int net_int;
-    rc = zmq_recv(zezfio_socket, &net_int, sizeof(int), 0);
-//    msg_len = ntohl(net_int); //Deal with endian
-    msg_len = net_int; 
+    rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0) {
+        perror("get.nuclei.xyz do not exists:");
+        return 1;       
+    }
 
+    rc = zmq_recv(zezfio_socket, &msg_len, sizeof(int), 0);
     char xyz_data[msg_len];
     rc = zmq_recv(zezfio_socket, xyz_data, msg_len, 0);
-    std::istringstream input_file((std::string(xyz_data)));
-    
-    //From path
-    
-    /* struct stat buffer;
-    if (stat(xyz_path.c_str(), &buffer) != 0) {
-        printf("%s:\n", xyz_path.c_str());
-        perror("The xyz file do not exists");
-        return 1;
-    }
-    ifstream input_file(xyz_path);
-    */
 
+    std::istringstream input_file((std::string(xyz_data)));
     vector<Atom> atoms = libint2::read_dotxyz(input_file);
-    
+
     /*** =========================== ***/
     /*** create basis set            ***/
     /*** =========================== ***/
 
-    const pid_t pid = getpid();
 
-    char libint_data_path[512];
-    sprintf(libint_data_path, "/dev/shm/%ld/LIBINT_DATA_PATH", (long) getpid());
-    rc = mkdir(libint_data_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-    sprintf(msg, "LIBINT_DATA_PATH=%s", libint_data_path);
-    putenv(msg);
+    const char* order_basis = "get.ao.basis_g94";
+    rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),0);
 
+    rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0) {
+        perror("get.ao.basis_g94 do not exists:");
+        return 1;       
+    }
 
-    const char* order2 = "get.ao.basis_g94";
-    rc = zmq_send(zezfio_socket,order2,strlen(order2)*sizeof(char),0);
-    rc = zmq_recv(zezfio_socket, &net_int, 4, 0);
-//    msg_len = ntohl(net_int); //Deal with endian
-    msg_len = net_int;
-
+    rc = zmq_recv(zezfio_socket, &msg_len, sizeof(int), 0);
     char basis_data[msg_len];
     rc = zmq_recv(zezfio_socket, basis_data, msg_len, 0);
 
 
-    const char* basis_name = "zezfio.g94";
+    const pid_t pid = getpid();
+
+    char shm_pid_path[512];
+    sprintf(shm_pid_path, "/dev/shm/%ld", (long) getpid());
+    rc = mkdir(shm_pid_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    //Maybe we need to check the Error code. If already exist ok, other exit
+
+    char libint_data_path[512];
+    sprintf(libint_data_path, "%s/LIBINT_DATA_PATH", shm_pid_path);
+    rc = mkdir(libint_data_path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    //Maybe we need to check the Error code. If already exist ok, other exit
+
+
+
+    const char* basis_name = "zezfio";
     char basis_path[512];
-    strcpy(basis_path, msg);
-    strcat(basis_path,"/");
-    strcat(basis_path,basis_name);
+    sprintf(basis_path, "%s/%s.g94",libint_data_path,basis_name);
 
     ofstream myfile;
-    myfile.open(basis_name);
+    myfile.open(basis_path);
     myfile << basis_data;
     myfile.close();
-  
+
+    char env[512];
+    sprintf(env, "LIBINT_DATA_PATH=%s", libint_data_path);
+    putenv(env);
+
+
     libint2::Shell::do_enforce_unit_normalization(false);
     BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
+    //Remove now useless file
+    rc = remove(basis_path);
+    rc = rmdir(libint_data_path);
+    rc = rmdir(shm_pid_path);
+
+
     const size_t nshell = obs.size();
     const size_t nao = obs.nbf();
     const size_t unao = 0.25 * nao * (nao + 1) * (0.5 * nao * (nao + 1) + 1);
+
 
     libint2::init(); // do not use libint before this
 
@@ -403,7 +399,7 @@ int main(int argc, char* argv[])
 
     const auto Schwartz = compute_schwartz_ints(obs);
 
-
+    char msg[512];
     if (do_task) {
         /*TODO
         * compute MN shell pair for better load balancing
@@ -600,6 +596,7 @@ int main(int argc, char* argv[])
     rc = zmq_disconnect(qp_run_socket, task_scheduler_address.c_str());
     rc = zmq_setsockopt(qp_run_socket, ZMQ_LINGER, &value, 4);
     rc = zmq_close(qp_run_socket);
+
 
     libint2::finalize(); // do not use libint after this
     return 0;
