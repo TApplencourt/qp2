@@ -27,7 +27,7 @@ typedef Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
  *                            
  */
 
-// BOROWED FROM LIBINT Hartree-Fock
+
 using libint2::Atom;
 using libint2::BasisSet;
 
@@ -432,6 +432,14 @@ int main(int argc, char* argv[])
         // shell2bf[0] = index of the first basis function in shell 0
         // shell2bf[1] = index of the first basis function in shell 1
         // ...
+
+
+/*
+Operator::overlap: overlap;
+Operator::kinetic: kinetic energy;
+Operator::nuclear: Coulomb potential due to point charges;
+Operator::coulomb;
+*/
 
         libint2::OneBodyEngine onebody_engine(libint2::OneBodyEngine::overlap, // will compute overlap ints
             obs.max_nprim(), // max # of primitives in shells this engine will accept
