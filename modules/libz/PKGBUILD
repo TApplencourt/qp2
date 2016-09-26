@@ -1,0 +1,19 @@
+pkgname=zlib
+pkgver=1.2.8
+pkgrel=4
+pkgdesc='Compression library implementing the deflate compression method found in gzip and PKZIP'
+url="http://www.zlib.net/"
+depends=('glibc')
+source=("http://zlib.net/current/zlib-${pkgver}.tar.gz")
+
+build() {
+	cd ${srcdir}/zlib-$pkgver
+	./configure --prefix=/usr
+	make
+}
+
+package() {
+	cd ${srcdir}/zlib-$pkgver
+	make install DESTDIR=${pkgdir}
+}
+
