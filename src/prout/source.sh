@@ -68,7 +68,7 @@ fn_source() {
             local url=${temp_startdir}/${array[1]}
             local target_file=${temp_srcdir}/${array[2]}
 
-            if [ ! -f "${target_file}" ]; then          
+            if [ ! -f "${target_file}" ]; then     
                 rel_symlink "${url}" "${target_file}"
             else
                 warning "$(gettext "%s file already exists (%s)")" "${s}" "${target_file})" 

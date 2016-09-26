@@ -49,12 +49,8 @@ unsafe_source() {
                 exit 1
             else
                 startdir_children=$(dirname $child_pkgfile)
-                srcdir_parent="${startdir}/src/$child_pkgname/"
-
-                (
-                source $child_pkgfile
-                fn_source 1 $startdir_children $srcdir_parent ${source[@]}
-                )
+                srcdir_parent="${startdir}/src/$child_pkgname"
+                ln -s $startdir_children $srcdir_parent 
             fi
         done
     fi
