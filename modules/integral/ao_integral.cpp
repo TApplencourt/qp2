@@ -1,6 +1,7 @@
 #include <libint2.hpp>
 #include "libint_tools.h" //Will include ezfio and zmq
-#include "mo_elec.h" //sendMono
+#include "mono.h" //sendMono
+#include "bi.h" //sendMono
 #include <getopt.h>
 #include <cstdio> 
 #include <stdio.h> 
@@ -98,7 +99,7 @@ int main(int argc, char* argv[])
 
 
     /*** ======= **/
-    /*** ZeroMQ  **/
+    /*** zezfio  **/
     /*** ======= **/
     void* context = zmq_ctx_new(); // Do not use ZeroMQ before this
     void* zezfio_socket = zmq_socket(context, ZMQ_REQ);
@@ -109,17 +110,40 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    libint2::init();
-
-
-    //TODO:
-    // Send these 3 array by zezfio
-    // Create a function to do this in libint_tools.cc
     Atom_Obs ao = zezfio2libint(zezfio_socket);
 
-    sendMono(ao);
+    /*** ============ **/
+    /*** mono or bi?  **/
+    /*** ============ **/
 
-    libint2::finalize();
+    if (strcmp(mode,"monoelec")) {
+        sendMono(zezfio_socket, ao);
+    }
+
+    if (strcmp(mode,"bielec")){
+
+        void* task_socket = zmq_socket(context, ZMQ_REQ);    
+        rc = zmq_connect(task_socket, task_scheduler_address);
+        if (rc != 0) {
+            perror("Error connecting the zezfio_socket");
+            return 1;
+        }
+
+        if (do_task){
+           sendBiTask(task_socket,ao);
+        }
+        else{
+
+            Collector_Info ci = initializeCollector(context,task_socket);
+            sendBiInt(task_socket,ci,ao);
+            filinizeCollector(task_socket,ci);
+        }
+
+        rc = zmq_close(task_socket);
+    }
+
+    rc = zmq_close(zezfio_socket);
+    zmq_ctx_destroy (context);
 
     return 0;
 };

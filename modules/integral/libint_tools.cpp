@@ -1,3 +1,4 @@
+#include <libint2.hpp>
 #include "libint_tools.h"
 #include <stdio.h> // fputc
 #include <zmq.h> 
@@ -73,14 +74,41 @@ Atom_Obs zezfio2libint(void* zezfio_socket){
     libint2::BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
-
     //Borowed from https://github.com/evaleev/libint/blob/a1741716a89c96cec6ad064f8bf5fb22f1df606a/tests/hartree-fock/hartree-fock.cc#L120
     std::vector<std::pair<double,std::array<double,3>>> q;
     for(const auto& atom : atoms) { q.push_back( {static_cast<double>(atom.atomic_number), {{atom.x, atom.y, atom.z}}} );}
 
+
+    libint2::init();
+
+    libint2::OneBodyEngine overlap_engine(libint2::OneBodyEngine::overlap, // will compute overlap ints
+                                          obs.max_nprim(), // max # of primitives in shells this engine will accept
+                                          obs.max_l()      // max angular momentum of shells this engine will accept
+                                         );
+
+    auto shell2bf = obs.shell2bf(); // maps shell index to basis function index
+                                    // shell2bf[0] = index of the first basis function in shell 0
+                                    // shell2bf[1] = index of the first basis function in shell 1
+
+    /* Compute renormalization factors for AOs due to <xy|xy> != <xx|xx> */
+    std::vector<double> renorm(obs.nbf());
+    for (int s1 = 0; s1 < obs.size(); s1++) {
+        const auto* ints_shellset = overlap_engine.compute(obs[s1], obs[s1]);
+        const int n1 = obs[s1].size();
+        const int bf1_first = shell2bf[s1];
+        for (int bf1 = 0; bf1 < n1; bf1++) {
+            const int ao_idx = bf1_first + bf1;
+            const int diag_idx = bf1 * n1 + bf1;
+            renorm[ao_idx] = sqrt(ints_shellset[0] / ints_shellset[diag_idx]);
+        }
+    }
+
+    libint2::finalize();
+
     Atom_Obs ao;
     ao.atoms = q;
     ao.obs = obs;
+    ao.renorm = renorm;
 
     //Cleaning.
     rc = remove(basis_path);
@@ -88,4 +116,5 @@ Atom_Obs zezfio2libint(void* zezfio_socket){
     rc = rmdir(shm_pid_path);
     return ao;
 }
+
 
