@@ -73,8 +73,13 @@ Atom_Obs zezfio2libint(void* zezfio_socket){
     libint2::BasisSet obs(basis_name, atoms);
     obs.set_pure(false); // use cartesian gaussians
 
+
+    //Borowed from https://github.com/evaleev/libint/blob/a1741716a89c96cec6ad064f8bf5fb22f1df606a/tests/hartree-fock/hartree-fock.cc#L120
+    std::vector<std::pair<double,std::array<double,3>>> q;
+    for(const auto& atom : atoms) { q.push_back( {static_cast<double>(atom.atomic_number), {{atom.x, atom.y, atom.z}}} );}
+
     Atom_Obs ao;
-    ao.atoms = atoms;
+    ao.atoms = q;
     ao.obs = obs;
 
     //Cleaning.

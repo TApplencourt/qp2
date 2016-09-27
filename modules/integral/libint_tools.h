@@ -1,8 +1,6 @@
-#include <libint2.hpp>
-
 struct Atom_Obs
 {
-    std::vector<libint2::Atom> atoms;
+    std::vector<std::pair<double,std::array<double,3>>> atoms;
     libint2::BasisSet obs;
 };
 
