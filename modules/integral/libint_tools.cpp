@@ -35,7 +35,7 @@ Atom_Obs zezfio2libint(void* zezfio_socket){
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
     if (zerrno < 0) {
-        perror("get.ao.g94 do not exists:");
+        perror("get.ao_basis.g94 do not exists:");
         std::exit(EXIT_FAILURE);  
     }
 

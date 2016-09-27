@@ -29,11 +29,10 @@ is stored.
 "
 
 build() {
-#  make
-	 g++ -g -O2 -std=c++0x -DHAVE_CONFIG_H integral_bielec.cc  -lint2 -lzmq -o integral_bielec
-#        icpc -O3 -std=c++0x -DHAVE_CONFIG_H integral_bielec.cc  -lint2 -lzmq -o integral_bielec
+  make
+#	 g++ -g -O2 -std=c++0x -DHAVE_CONFIG_H integral_bielec.cc  -lint2 -lzmq -o integral_bielec
 }
 
 package() {
-	cp integral_bielec ${pkgdir}/usr/bin
+	cp ao_integral ${pkgdir}/usr/bin
 }

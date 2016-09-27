@@ -116,16 +116,16 @@ int main(int argc, char* argv[])
     /*** mono or bi?  **/
     /*** ============ **/
 
-    if (strcmp(mode,"monoelec")) {
+    if (strcmp(mode,"monoelec") == 0) {
         sendMono(zezfio_socket, ao);
     }
 
-    if (strcmp(mode,"bielec")){
+    if (strcmp(mode,"bielec") == 0){
 
         void* task_socket = zmq_socket(context, ZMQ_REQ);    
         rc = zmq_connect(task_socket, task_scheduler_address);
         if (rc != 0) {
-            perror("Error connecting the zezfio_socket");
+            perror("Error connecting the task_scheduler_address");
             return 1;
         }
 

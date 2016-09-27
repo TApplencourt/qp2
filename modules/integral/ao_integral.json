@@ -1,0 +1,19 @@
+{
+"ao_basis":[
+                {
+                    "name":"integral_overlap",
+                    "type": "double",
+                    "shape": "[ao_basis.ao_num,ao_basis.ao_num]"
+                },
+                {
+                    "name":"integra_nuclearl",
+                    "type": "double",
+                    "shape": "[ao_basis.ao_num,ao_basis.ao_num]"
+                },
+                {
+                    "name":"integral_kinetic",
+                    "type": "double",
+                    "shape": "[ao_basis.ao_num,ao_basis.ao_num]"
+                }
+            ]
+}
