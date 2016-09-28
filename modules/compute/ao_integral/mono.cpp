@@ -8,7 +8,6 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
 
 
     libint2::init();
-
     libint2::BasisSet obs = AO.obs;
 
 
@@ -43,7 +42,7 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
       nuclear[i] = nuclear[i-1] + nao;
     }
 
-    std::vector<double> renorm = AO.renorm;
+    std::vector<double> &renorm = AO.renorm;
 
     for(auto s1=0; s1!=obs.size(); ++s1) {
       for(auto s2=0; s2!=obs.size(); ++s2) {
@@ -57,15 +56,16 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
         const auto bf2 = shell2bf[s2];  // first basis function in second shell
         const auto n2 = obs[s2].size(); // number of basis functions in second shell
 
-        const double norm = renorm[bf1] * renorm[bf2];
 
         for(auto f1=0; f1!=n1; ++f1)
           for(auto f2=0; f2!=n2; ++f2)
           { 
             const int idx = f1*n2+f2;
+            const double norm = renorm[bf1+f1] * renorm[bf2+f2];
             overlap[bf1+f1][bf2+f2] = ints_shellset_overlap[idx] * norm;
             nuclear[bf1+f1][bf2+f2] = ints_shellset_nuclear[idx] * norm;
             kinetic[bf1+f1][bf2+f2] = ints_shellset_kinetic[idx] * norm;
+printf("%d %d %lf\n", bf1+f1,bf2+f2,norm);
           }
       }
     }
