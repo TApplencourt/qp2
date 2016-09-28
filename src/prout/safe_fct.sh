@@ -37,8 +37,6 @@ unsafe_source() {
 
         l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | xargs gardener irp_depends | sequoia $pkgname)
 
-        echo  ${l_pkgbuild[@]}
-
         for child_pkgname in ${l_pkgbuild[@]}; do
             #Get the full path of all the dependancy of pkgfile
             local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | xargs egrep -l "pkgname=$child_pkgname")

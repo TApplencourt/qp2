@@ -99,6 +99,7 @@ for pkgfile in $@; do
     srcdir="${startdir}/src"
     pkgdir="${startdir}/pkg"
     
+    cd $startdir
     source $pkgfile    
     plain "Handle $pkgname"
 
