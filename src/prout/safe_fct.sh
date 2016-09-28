@@ -54,7 +54,7 @@ unsafe_source() {
                 startdir_children=$(dirname $child_pkgfile)
                 srcdir_parent="${startdir}/src/$child_pkgname"
                 if [ ! -L "$srcdir_parent" ]; then
-                    ln -s $startdir_children $srcdir_parent 
+                    ln -s -- $startdir_children $srcdir_parent 
                 fi
                 
             fi
