@@ -62,24 +62,37 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
       }
     }
 
+    int zerrno, rc;
     const char* order_basis = "set.ao_basis.integral_overlap";
-    int rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
+    rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
     rc = zmq_send(zezfio_socket,overlap,len,0);
 
-    int zerrno;
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0 ){
+        perror("Cannot set.ao_basis.integral_overlap");
+        exit(EXIT_FAILURE);
+    }
+
 
     order_basis = "set.ao_basis.integral_nuclear";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
     rc = zmq_send(zezfio_socket,nuclear,len,0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0 ){
+        perror("Cannot set.ao_basis.integral_nuclear");
+        exit(EXIT_FAILURE);
+    }
 
     order_basis = "set.ao_basis.integral_kinetic";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
     rc = zmq_send(zezfio_socket,kinetic,len,0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0 ){
+        perror("Cannot set.ao_basis.integral_kinetic");
+        exit(EXIT_FAILURE);
+    }
 
    libint2::finalize();
 
