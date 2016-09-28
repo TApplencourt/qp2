@@ -35,12 +35,16 @@ unsafe_source() {
 
     if ! [ -z "${irp_depends+x}" ]; then
 
-        l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | xargs gardener irp_depends | sequoia $pkgname)
-
+        #We need to copy the dir beacause
+        #if we use symlink, irpf90 will create bin in here symlink...
+        #So we need  to filter all the module who have been copy. This is the raison for grep -v /src/
+        #Yeah... I know...
+        l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | grep -v /src/ | xargs gardener irp_depends | sequoia $pkgname)
         for child_pkgname in ${l_pkgbuild[@]}; do
             #Get the full path of all the dependancy of pkgfile
-            local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | xargs egrep -l "pkgname=$child_pkgname")
-            if [ -z ${child_pkgfile}  ]; then
+            local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | grep -v /src/ | xargs egrep -l "pkgname=$child_pkgname")
+
+            if [ -z ${child_pkgfile} ]; then
                 error "$(gettext "Cannot find the full path of module in irp_depends")"
                 exit 1
             fi
@@ -51,9 +55,13 @@ unsafe_source() {
             else
                 startdir_children=$(dirname $child_pkgfile)
                 srcdir_parent="${startdir}/src/$child_pkgname"
-                if [ ! -L "$srcdir_parent" ]; then
-                    ln -s -- $startdir_children $srcdir_parent 
+#                if [ ! -L "$srcdir_parent" ]; then
+#                    ln -s -- $startdir_children $srcdir_parent 
+#                fi
+                if [ ! -d "$srcdir_parent" ]; then
+                    cp -a -- $startdir_children $srcdir_parent 
                 fi
+
                 
             fi
         done
