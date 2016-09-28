@@ -34,7 +34,7 @@ build() {
 }
 
 package() {
-  mkdir -p ${pkgdir}/usr/bin ${pkgdir}/usr/share/json/zezfio
+	mkdir -p ${pkgdir}/usr/share/json/zezfio
 	cp ao_integral ${pkgdir}/usr/bin/
-  cp ao_integral.json ${pkgdir}/usr/share/json/zezfio/
+	cp ao_integral.json ${pkgdir}/usr/share/json/zezfio/
 }

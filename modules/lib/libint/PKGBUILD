@@ -4,7 +4,8 @@ pkgname=libint
 pkgver=2.1.0
 eigname=eigen
 eigver=3.2.8
-pkgdesc="A library for the evaluation of molecular integrals of many-body operators over Gaussian functions. Installs eigen ${eigver}"
+pkgdesc="A library for the evaluation of molecular integrals of many-body operators 
+over Gaussian functions. Installs eigen ${eigver}"
 url="https://github.com/evaleev/libint"
 
 source=("https://github.com/evaleev/libint/releases/download/v${pkgver}/libint-${pkgver}-stable.tgz"

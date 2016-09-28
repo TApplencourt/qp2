@@ -26,13 +26,22 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
                                     // shell2bf[0] = index of the first basis function in shell 0
                                     // shell2bf[1] = index of the first basis function in shell 1
 
-    const size_t nao = obs.nbf();
-    const size_t len = nao*nao*sizeof(double);
-    int i = 0;
+    const int nao = (int) obs.nbf();
+    const size_t len = (size_t) (nao*nao)*sizeof(double);
 
-    double * overlap = (double*) malloc(len);
-    double * nuclear = (double*) malloc(len);
-    double * kinetic = (double*) malloc(len);
+    double ** overlap = (double**) malloc(nao*sizeof(double*));
+    double ** nuclear = (double**) malloc(nao*sizeof(double*));
+    double ** kinetic = (double**) malloc(nao*sizeof(double*));
+
+    overlap[0] = (double*) malloc((nao*nao)*sizeof(double));
+    nuclear[0] = (double*) malloc((nao*nao)*sizeof(double));
+    kinetic[0] = (double*) malloc((nao*nao)*sizeof(double));
+    for (auto i=1 ; i<nao ; i++)
+    {
+      overlap[i] = overlap[i-1] + nao;
+      kinetic[i] = kinetic[i-1] + nao;
+      nuclear[i] = nuclear[i-1] + nao;
+    }
 
     std::vector<double> renorm = AO.renorm;
 
@@ -54,18 +63,28 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
           for(auto f2=0; f2!=n2; ++f2)
           { 
             const int idx = f1*n2+f2;
-            overlap[i] = ints_shellset_overlap[idx] * norm;
-            nuclear[i] = ints_shellset_nuclear[idx] * norm;
-            kinetic[i] = ints_shellset_kinetic[idx] * norm;
-            i++;
+            overlap[bf1+f1][bf2+f2] = ints_shellset_overlap[idx] * norm;
+            nuclear[bf1+f1][bf2+f2] = ints_shellset_nuclear[idx] * norm;
+            kinetic[bf1+f1][bf2+f2] = ints_shellset_kinetic[idx] * norm;
           }
       }
     }
 
     int zerrno, rc;
-    const char* order_basis = "set.ao_basis.integral_overlap";
+    const char* order_basis = "set.ao_basis.ao_num";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
-    rc = zmq_send(zezfio_socket,overlap,len,0);
+    
+    rc = zmq_send(zezfio_socket,&nao,sizeof(int),0);
+
+    rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
+    if (zerrno < 0 ){
+        perror("Cannot set.ao_basis.ao_num");
+        exit(EXIT_FAILURE);
+    }
+
+    order_basis = "set.ao_basis.integral_overlap";
+    rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
+    rc = zmq_send(zezfio_socket,overlap[0],len,0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
     if (zerrno < 0 ){
@@ -76,7 +95,7 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
 
     order_basis = "set.ao_basis.integral_nuclear";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
-    rc = zmq_send(zezfio_socket,nuclear,len,0);
+    rc = zmq_send(zezfio_socket,nuclear[0],len,0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
     if (zerrno < 0 ){
@@ -86,7 +105,7 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
 
     order_basis = "set.ao_basis.integral_kinetic";
     rc = zmq_send(zezfio_socket,order_basis,strlen(order_basis)*sizeof(char),ZMQ_SNDMORE);
-    rc = zmq_send(zezfio_socket,kinetic,len,0);
+    rc = zmq_send(zezfio_socket,kinetic[0],len,0);
 
     rc = zmq_recv(zezfio_socket, &zerrno, sizeof(int), 0);
     if (zerrno < 0 ){

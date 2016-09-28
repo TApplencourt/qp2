@@ -14,6 +14,14 @@
                     "name":"integral_kinetic",
                     "type": "double",
                     "shape": "[ao_basis.ao_num,ao_basis.ao_num]"
+                },
+                {
+                    "name":"ao_num",
+                    "type": "int"
+                },
+                {
+                    "name":"g94",
+                    "type": "raw"
                 }
             ]
 }
