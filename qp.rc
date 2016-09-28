@@ -1,7 +1,7 @@
 #!/bin/bash
 
 export qp_root="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-export qp_module="${qp_root}/modules ${qp_root}/modules/compute ${qp_root}/modules/lib"
+export qp_module="${qp_root}/modules"
 
 for file in ${qp_root}/usr/share/bashrc.d/*
 do

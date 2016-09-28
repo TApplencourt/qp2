@@ -34,8 +34,8 @@ unsafe_source() {
     fi    
 
     if ! [ -z "${irp_depends+x}" ]; then
-
         l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | xargs gardener irp_depends | sequoia $pkgname)
+
         for child_pkgname in ${l_pkgbuild[@]}; do
             #Get the full path of all the dependancy of pkgfile
             local child_pkgfile=$(find $qp_module -type f -name PKGBUILD | xargs egrep -l "pkgname=$child_pkgname")
@@ -94,7 +94,7 @@ unsafe_package() {
 
     if fn_exists package; then
 
-        mkdir -p  ${pkgdir}/usr/{bin,local,include,share/{json,bashrc.d},lib}  
+        mkdir -p  ${pkgdir}/usr/{bin,local,include,share,lib}  
 
         travel ${srcdir} package
         update_db

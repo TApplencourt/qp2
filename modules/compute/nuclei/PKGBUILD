@@ -13,6 +13,7 @@ build() {
 }
 
 package() {
-	cp nuclei.json ${pkgdir}/usr/share/json
 	cp test_nuclei ${pkgdir}/usr/bin/
+	mkdir -p ${pkgdir}/usr/share/json/zezfio/
+	cp nuclei.json ${pkgdir}/usr/share/json/zezfio/
 }
