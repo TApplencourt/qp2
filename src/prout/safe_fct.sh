@@ -34,7 +34,10 @@ unsafe_source() {
     fi    
 
     if ! [ -z "${irp_depends+x}" ]; then
+
         l_pkgbuild=$(find $qp_module -type f -name PKGBUILD | xargs gardener irp_depends | sequoia $pkgname)
+
+        echo  ${l_pkgbuild[@]}
 
         for child_pkgname in ${l_pkgbuild[@]}; do
             #Get the full path of all the dependancy of pkgfile
@@ -50,7 +53,10 @@ unsafe_source() {
             else
                 startdir_children=$(dirname $child_pkgfile)
                 srcdir_parent="${startdir}/src/$child_pkgname"
-                ln -s $startdir_children $srcdir_parent 
+                if [ ! -L "$srcdir_parent" ]; then
+                    ln -s $startdir_children $srcdir_parent 
+                fi
+                
             fi
         done
     fi
