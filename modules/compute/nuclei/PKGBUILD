@@ -5,6 +5,7 @@ pkgver=0.1
 pkgdesc="Providers of nuclei"
 source=(nuclei.json Makefile *.irp.f)
 
+bin_depends=(irpf90)
 irp_depends=(utils_irp)
 lib_depends=(libzezfio_f)
 
