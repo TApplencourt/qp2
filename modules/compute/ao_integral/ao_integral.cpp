@@ -14,14 +14,14 @@ void print_usage()
 
 
     printf("\nUSAGE\n");
-    printf("  ao_integral monoelec -z <z_address>\n");
-    printf("  ao_integral bielec   -z <z_address> -s <s_address> [-t]\n");
+    printf("  ao_integral monoelec -z <z_endpoint>\n");
+    printf("  ao_integral bielec   -z <z_endpoint> -t <t_endpoint> [-g]\n");
 
     printf("\nOPTION\n");
-    printf("    -h                                : Give help\n");
-    printf("    -z, --zezfio_server  <z_address>  : The address of the zezfio server\n");
-    printf("    -t, --task_server    <ts_address> : The address of the task scheduler server\n");
-    printf("    -g  --generate_task               : Create the Task\n");
+    printf("    -h                           : Give help\n");
+    printf("    -z, --zezfio  <z_endpoint>  : The endpoint of the zezfio server\n");
+    printf("    -t, --task    <t_endpoint>  : The endpoint of the task scheduler server\n");
+    printf("    -g  --generate_task         : Create the Task\n");
 }
 
 void print_help()
@@ -52,9 +52,9 @@ int main(int argc, char* argv[])
     static struct option long_options[] = {
         /* These options set a flag. */
         { "help", no_argument, 0, 'h' },
-        { "zezfio_server",required_argument,0, 'z'},
-        { "task_server", required_argument, 0, 't' },
-        { "task", no_argument, 0, 't' },
+        { "zezfio",required_argument,0, 'z'},
+        { "task", required_argument, 0, 't' },
+        { "generate_task", no_argument, 0, 'g' },
         { 0, 0, 0, 0 }
     };
 
@@ -76,10 +76,10 @@ int main(int argc, char* argv[])
             print_usage();
             print_help();
             return 0;
-        case 't':
+        case 'g':
             do_task = 1;
             break;
-        case 'a':
+        case 't':
             task_scheduler_address = optarg;
             break;
         case 'z':

@@ -65,8 +65,7 @@ void sendMono(void* zezfio_socket, Atom_Obs AO){
             overlap[bf1+f1][bf2+f2] = ints_shellset_overlap[idx] * norm;
             nuclear[bf1+f1][bf2+f2] = ints_shellset_nuclear[idx] * norm;
             kinetic[bf1+f1][bf2+f2] = ints_shellset_kinetic[idx] * norm;
-printf("%d %d %lf\n", bf1+f1,bf2+f2,norm);
-          }
+            }
       }
     }
 
